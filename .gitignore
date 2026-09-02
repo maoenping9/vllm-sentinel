@@ -1,0 +1,15 @@
+.env
+.env.bak*
+data/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+__pycache__/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+work/
+*.log
+.DS_Store
+

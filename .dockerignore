@@ -1,0 +1,12 @@
+.git
+.gitignore
+frontend/node_modules
+frontend/dist
+frontend/.vite
+data
+work
+outputs
+*.zip
+*.log
+__pycache__
+*.pyc

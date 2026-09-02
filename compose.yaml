@@ -1,0 +1,83 @@
+name: vllm-sentinel
+
+services:
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vllm-sentinel:1.1.0
+    container_name: vllm-sentinel
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    gpus: all
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    volumes:
+      - /:/host:ro,rslave
+      - sentinel-data:/data
+    environment:
+      SENTINEL_PORT: ${SENTINEL_PORT:-8733}
+      VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-[{"name":"DeepSeek-V4-Flash","url":"http://127.0.0.1:9003"}]}
+      SAMPLE_INTERVAL: ${SAMPLE_INTERVAL:-2}
+      HISTORY_RETENTION_HOURS: ${HISTORY_RETENTION_HOURS:-168}
+      DASHBOARD_AUTH_ENABLED: ${DASHBOARD_AUTH_ENABLED:-false}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
+      GPU_TEMP_WARNING: ${GPU_TEMP_WARNING:-78}
+      GPU_TEMP_CRITICAL: ${GPU_TEMP_CRITICAL:-86}
+      GPU_MEMORY_WARNING: ${GPU_MEMORY_WARNING:-92}
+      QUEUE_WARNING: ${QUEUE_WARNING:-16}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: utility,compute
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  bmc-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vllm-sentinel:1.1.0
+    container_name: vllm-sentinel-bmc
+    restart: unless-stopped
+    network_mode: none
+    user: "0:0"
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    devices:
+      - /dev/ipmi0:/dev/ipmi0
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - sentinel-data:/data
+    environment:
+      BMC_SAMPLE_INTERVAL: ${BMC_SAMPLE_INTERVAL:-5}
+    command: ["python", "-m", "backend.bmc_agent"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,time; d=json.load(open('/data/bmc-state.json')); assert d.get('online') and time.time()-d['timestamp'] < 30"]
+      interval: 15s
+      timeout: 4s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+volumes:
+  sentinel-data:
+    name: vllm-sentinel-data
