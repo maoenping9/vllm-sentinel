@@ -197,9 +197,10 @@ class GpuCollector:
                 "memory_total_mb": total, "memory_used_mb": used, "memory_free_mb": _num(value["memory.free"]),
                 "memory_percent": round(used / total * 100, 1) if total else 0,
                 "temperature": _num(value["temperature.gpu"]), "power_w": _num(value["power.draw"]), "power_limit_w": _num(value["power.limit"]),
-                "fan_percent": _num(value["fan.speed"]), "clock_sm_mhz": _num(value["clocks.current.sm"]), "clock_memory_mhz": _num(value["clocks.current.memory"]), "pstate": value["pstate"],
+                "fan_percent": _num(value["fan.speed"]), "fan_pwm": 0, "fan_rpm": 0, "clock_sm_mhz": _num(value["clocks.current.sm"]), "clock_memory_mhz": _num(value["clocks.current.memory"]), "pstate": value["pstate"],
                 "processes": processes.get(value["uuid"], []),
             })
+        self._apply_corsair_fans(items)
         total_mem = sum(item["memory_total_mb"] for item in items)
         used_mem = sum(item["memory_used_mb"] for item in items)
         return {
@@ -208,3 +209,171 @@ class GpuCollector:
             "memory_total_mb": total_mem, "memory_used_mb": used_mem, "memory_percent": round(used_mem/total_mem*100, 1) if total_mem else 0,
             "power_w": round(sum(item["power_w"] for item in items), 1), "max_temperature": max((item["temperature"] for item in items), default=0),
         }
+
+    # ----- 海盗船 Commander Pro (corsair_cpro hwmon) GPU 风扇实时 PWM → 转速 -----
+    # 矿卡 fan.speed(NVML) 恒 0 / 无 tach, 按 PWM 占空比线性反算：RPM = PWM/255 × 3450（满速 3450）。
+    # 映射来自宿主机 /etc/gpu-mapping.conf，支持两种键格式（2026-09-12 现场版）：
+    #   1. GPU<idx>=<dev>:<pin>[,...]           （GPU 索引版，dev=A/B/C/D 按序列号解析）
+    #   2. <pci.bus_id>=<label>-<hub>-<port>:<pin> （总线版，如 00000000:21:00.0=1000D-3-4.3:4；
+    #      dev 尾段 <port>（"4.3"）与该 Commander 的 HID_PHYS usb 端口段匹配定位 hwmon 目录）
+    # GPU13(RTX3090Ti) 板载风扇自行控制，不在映射内，保持系统读数。
+    FAN_MAX_RPM = 3450
+    # v28：SERIAL 表补 E=0D05...2128（当前在线的第 3 台 Commander，USB 口 2.3）。
+    # v27 只认 A/B/C/D 四台旧设备，标签 1000D-3-2.3 的二级查找错位到 D(=4.3 设备)、
+    # 三级端口段兜底又错位到 2.3(=另一台) —— GPU4/7/8/11 的 PWM 全部读错设备。
+    # 补 E 后二级查找按序列号精确定位（与温控软件 gpu-fan-control 同路径），13/13 与实测定 位一致。
+    _CORS_SERIAL = {"A": "0A0500CC94300712", "B": "150500B6931C0E0D", "C": "0505037A2429241F", "D": "0E05037A24291610", "E": "0D05037A24292128"}
+    # v27：dev 标签 → 序列号（与温控软件 gpu-fan-control 的 SERIAL 表一致）。
+    # conf 的 dev=1000D-3-4.2 这类标签按此表解析到序列号再定位 hwmon（温控软件写 pwm 的同一设备），
+    # 解决 4.2 口 USB 端口段未枚举（HID_PHYS 只有 2.2/2.3/4.3）导致后端读不到 pwm 的问题。
+    _CORS_LABEL_SERIAL = {
+        "1000D-3-2.3": "0D05037A24292128",
+        "1000D-3-4.2": "0505037A2429241F",
+        "1000D-3-4.3": "0E05037A24291610",
+    }
+    _cors_map: dict[int, list[tuple[str, int]]] | None = None
+    _cors_hwmon: dict[str, Path] | None = None
+    _cors_ports: dict[str, Path] | None = None
+
+    def _cors_port_dirs(self) -> dict[str, Path]:
+        """Commander hubport（如 "4.3"）→ hwmon 目录，按 HID_PHYS usb 端口段解析。"""
+        if self._cors_ports is not None:
+            return self._cors_ports
+        result: dict[str, Path] = {}
+        try:
+            candidates = list((SYS / "class" / "hwmon").glob("hwmon*"))
+        except OSError:
+            candidates = []
+        for d in candidates:
+            if _text(d / "name").strip() != "corsaircpro":
+                continue
+            uevent = _text(d / "device" / "uevent")
+            for line in uevent.splitlines():
+                if line.startswith("HID_PHYS="):
+                    seg = line.split("=", 1)[1].strip()
+                    # usb-0000:68:00.3-2.3/input0 → "2.3"
+                    port_seg = seg.rsplit("/", 1)[0].rsplit("-", 1)[-1]
+                    if port_seg:
+                        result[port_seg] = d
+                    break
+        self._cors_ports = result
+        return result
+
+    def _cors_hwmon_dirs(self) -> dict[str, Path]:
+        if self._cors_hwmon is not None:
+            return self._cors_hwmon
+        result: dict[str, Path] = {}
+        try:
+            candidates = list((SYS / "class" / "hwmon").glob("hwmon*"))
+        except OSError:
+            candidates = []
+        for code, serial in self._CORS_SERIAL.items():
+            for d in candidates:
+                if _text(d / "name").strip() != "corsaircpro":
+                    continue
+                if "HID_UNIQ=" + serial in _text(d / "device" / "uevent"):
+                    result[code] = d
+                    break
+        self._cors_hwmon = result
+        return result
+
+    def _cors_mapping(self) -> dict[int, list[tuple[str, int]]]:
+        if self._cors_map is not None:
+            return self._cors_map
+        mapping: dict[int, list[tuple[str, int]]] = {}
+        p = Path(HOST_ROOT) / "etc" / "gpu-mapping.conf"
+        for line in _text(p).splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            idx: int | None = None
+            if key.startswith("GPU"):
+                # GPU 索引版: GPU13=C:1,C:2
+                try:
+                    idx = int(key[3:])
+                except ValueError:
+                    continue
+            elif key.count(":") == 2:
+                # 总线版: 00000000:21:00.0=1000D-3-4.3:4 → 按 NVML pci.bus_id 对应 GPU 索引
+                idx = self._gpu_index_by_bus(key)
+                if idx is None:
+                    continue
+            else:
+                continue
+            pairs: list[tuple[str, int]] = []
+            for part in value.split(","):
+                part = part.strip()
+                if not part or ":" not in part:
+                    continue
+                dev, _, pin = part.partition(":")
+                pin = pin.split()[0].strip()  # 去掉行内注释残留
+                try:
+                    pin_i = int(pin)
+                except ValueError:
+                    continue
+                if dev and pin_i > 0:
+                    pairs.append((dev, pin_i))
+            if idx is not None and pairs:
+                mapping[idx] = pairs
+        self._cors_map = mapping
+        return mapping
+
+    _gpu_bus_map: dict[str, int] | None = None
+
+    def _gpu_index_by_bus(self, bus_id: str) -> int | None:
+        """NVML pci.bus_id（00000000:21:00.0）→ GPU 索引；查不到返回 None。"""
+        if self._gpu_bus_map is None:
+            bus_map: dict[str, int] = {}
+            try:
+                result = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=index,pci.bus_id", "--format=csv,noheader,nounits"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                for row in result.stdout.splitlines():
+                    parts = [item.strip() for item in row.split(",")]
+                    if len(parts) >= 2:
+                        try:
+                            bus_map[parts[1].lower()] = int(parts[0])
+                        except ValueError:
+                            continue
+            except (OSError, subprocess.SubprocessError):
+                return None
+            self._gpu_bus_map = bus_map
+        return self._gpu_bus_map.get(bus_id.strip().lower())
+
+    def _apply_corsair_fans(self, items: list[dict[str, Any]]) -> None:
+        hw = self._cors_hwmon_dirs()
+        ports = self._cors_port_dirs()
+        for it in items:
+            entry = self._cors_mapping().get(it["index"])
+            if not entry:
+                continue
+            pwm_best = 0
+            for dev, pin in entry:
+                # v27 查找顺序：①序列号字母（A/B/C/D）→ ②dev 标签（1000D-3-X.Y）按
+                #   _CORS_LABEL_SERIAL 解析序列号再定位 hwmon（温控软件写 pwm 的同一设备）
+                #   → ③HID_PHYS usb 端口段（兜底）
+                hwdir = hw.get(dev)
+                if not hwdir:
+                    serial = self._CORS_LABEL_SERIAL.get(dev)
+                    if serial:
+                        for code, s in self._CORS_SERIAL.items():
+                            if s == serial:
+                                hwdir = hw.get(code)
+                                break
+                if not hwdir:
+                    # 总线版 dev：尾段 <port>（如 "4.3"）按 HID_PHYS 端口段定位
+                    port_seg = dev.rsplit("-", 1)[-1]
+                    hwdir = ports.get(port_seg)
+                if not hwdir:
+                    continue
+                pwm = _num(_text(hwdir / f"pwm{pin}"))
+                if pwm > pwm_best:
+                    pwm_best = pwm
+            if pwm_best > 0:
+                it["fan_pwm"] = round(pwm_best)
+                it["fan_percent"] = round(pwm_best / 255 * 100, 1)
+                it["fan_rpm"] = round(pwm_best / 255 * self.FAN_MAX_RPM, 0)
+

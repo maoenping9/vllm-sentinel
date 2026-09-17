@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Monitor</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;background:transparent;color:#e2e8f0}
+  .wrap{width:312px;background:linear-gradient(150deg,rgba(13,24,40,.86),rgba(6,12,22,.80));border:1px solid rgba(110,140,255,.2);border-radius:16px;padding:14px 14px 10px;box-shadow:0 16px 40px rgba(0,0,0,.35);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2)}
+  .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .br{font-size:12px;font-weight:800;letter-spacing:.05em;color:#c7d5ff}
+  .rt{display:flex;align-items:center;gap:6px;font-size:9px;color:#34d399}
+  .dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+  .cfg{cursor:pointer;font-size:10px;color:#94a3b8;background:rgba(110,140,255,.12);border:1px solid rgba(110,140,255,.2);border-radius:7px;padding:3px 8px}
+  .sec{font-size:8px;font-weight:700;letter-spacing:.1em;color:#6e8cff;margin:9px 0 4px}
+  .inst{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(110,140,255,.1);font-size:10px}
+  .inst b{font-weight:600}.inst span{font-family:'SF Mono',Consolas,monospace;font-size:9px;color:#94a3b8}
+  .gi{display:flex;align-items:center;gap:7px;padding:3px 0}
+  .gk{font-family:'SF Mono',monospace;font-size:9px;font-weight:700;color:#6e8cff;width:40px}
+  .gt{flex:1;height:5px;border-radius:3px;background:rgba(110,140,255,.14);overflow:hidden}
+  .gf{height:100%;background:linear-gradient(90deg,#6e8cff,#34d399);border-radius:3px}
+  .gm{font-family:'SF Mono',monospace;font-size:9px;color:#94a3b8;width:88px;text-align:right}
+  .pv{display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}
+  .foot{margin-top:8px;padding-top:6px;border-top:1px solid rgba(110,140,255,.1);display:flex;justify-content:space-between;font-size:8px;color:#64748b}
+  .pop{position:fixed;inset:0;z-index:9;display:none}
+  .pop.show{display:block}
+  .pk{position:absolute;top:34px;right:12px;width:230px;background:#0d1830;border:1px solid rgba(110,140,255,.2);border-radius:12px;padding:12px;box-shadow:0 16px 30px rgba(0,0,0,.4)}
+  .pk label{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#94a3b8;margin:7px 0}
+  .pk select{background:#0a1426;color:#e2e8f0;border:1px solid rgba(110,140,255,.2);border-radius:6px;font-size:10px;padding:3px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd"><span class="br">&#9670; vLLM MONITOR</span><span class="rt"><i class="dot"></i>your-server-ip</span><button class="cfg" onclick="document.getElementById('pop').classList.toggle('show')">&#9881; &#37197;&#32622;</button></div>
+  <div id="err" class="hide" style="color:#ef4444;font-size:10px;padding:6px 0">&#36830;&#25509;&#20013;&#8230;</div>
+  <div id="body"></div>
+</div>
+<div class="pop" id="pop" onclick="if(event.target===this)this.classList.remove('show')"><div class="pk">
+  <div style="font-size:11px;font-weight:700;color:#c7d5ff;margin-bottom:4px">&#37197;&#32622;</div>
+  <label>GPU &#26174;&#31034;<select id="cn"><option>3</option><option selected>5</option><option>8</option><option>14</option></select></label>
+  <label>&#20027;&#39064;<select id="tk"><option value="deep" selected>&#28145;&#28023;&#34013;</option><option value="gra">&#30707;&#22696;&#40657;</option><option value="lig">&#26376;&#20809;&#30333;</option></select></label>
+  <div style="font-size:8px;color:#64748b;margin-top:8px">&#25552;&#31034;&#65306;&#29992; Plash &#25171;&#24320;&#21363;&#21487;&#32622;&#39030;&#22312;&#25152;&#26377;&#31383;&#21475;&#20043;&#19978;&#12290;</div>
+</div></div>
+<script>
+var THEMES={deep:'linear-gradient(150deg,rgba(13,24,40,.86),rgba(6,12,22,.80))',gra:'linear-gradient(150deg,rgba(17,19,22,.88),rgba(12,13,15,.84))',lig:'linear-gradient(150deg,rgba(255,255,255,.9),rgba(238,242,248,.85))'};
+function nb(v,d){v=+v;return isFinite(v)?v.toFixed(d||0):'-'}
+function scr(g){return (+g.utilization||0)*0.7+(+g.temperature||0)*0.3}
+function esc(s){return String(s).replace(/[&<>]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[x]})}
+document.getElementById('tk').onchange=function(e){document.querySelector('.wrap').style.background=THEMES[e.target.value]||THEMES.deep};
+function draw(){fetch('http://your-server-ip:8889/api/state',{signal:AbortSignal.timeout(4000)}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){var err=document.getElementById('err'),body=document.getElementById('body');err.className='hide';body.className='';var a=d.vllm.aggregate,N=+document.getElementById('cn').value;var gpus=d.gpu.items.concat().sort(function(x,y){return scr(y)-scr(x)}).slice(0,N);var h='<div class="sec">'+'\u6a21\u578b '+a.online_instances+'/'+a.total_instances+' \u5728\u7ebf</div>';d.vllm.instances.forEach(function(i){h+='<div class="inst"><b>'+esc(i.models&&i.models[0]||i.name)+'</b><span>'+nb(i.generation_tokens_per_second,1)+' tok/s &middot; KV '+nb(i.kv_cache_percent,1)+'%</span></div>'});h+='<div class="sec">GPU TOP '+N+' &middot; '+nb(d.gpu.power_w,0)+'+200W</div>';gpus.forEach(function(g){var ld=Math.max(0,Math.min(100,+g.utilization||0));h+='<div class="gi"><span class="gk">GPU '+g.index+'</span><span class="gt"><span class="gf" style="width:'+ld+'%"></span></span><span class="gm">'+nb(g.temperature,0)+'&deg;C &middot; '+nb(g.fan_rpm,0)+'R</span></div>'});h+='<div class="pv"><span>\u6574\u673a '+((+d.gpu.power_w)+200)+'W</span><span>\u7535\u6e90 2600+2200W</span></div>';h+='<div class="foot"><span>'+new Date().toLocaleTimeString('zh-CN')+'</span><span>2s \u5b9e\u65f6</span></div>';body.innerHTML=h}).catch(function(){var err=document.getElementById('err');err.className='';err.textContent='\u25cf \u79bb\u7ebf\uff0c2s \u91cd\u8bd5\u2026'})}
+setInterval(draw,2000);draw();
+</script>
+</body>
+</html>

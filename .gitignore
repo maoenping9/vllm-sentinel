@@ -13,3 +13,8 @@ work/
 *.log
 .DS_Store
 
+
+# 组件备份 & 构建缓存
+index.jsx.bak-*
+index.jsx.current.bak-*
+*.tsbuildinfo

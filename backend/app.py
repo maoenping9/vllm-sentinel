@@ -12,12 +12,15 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .bmc_metrics import BmcCollector
 from .database import HistoryStore
+from .gpu_map import resolve as resolve_gpu_map
+from .gpu_map import _scan_small_services
 from .host_metrics import GpuCollector, HostCollector
 from .settings import APP_NAME, AUTH_ENABLED, AUTH_PASSWORD, AUTH_USERNAME, GPU_MEMORY_WARNING, GPU_TEMP_CRITICAL, GPU_TEMP_WARNING, QUEUE_WARNING, SAMPLE_INTERVAL
 from .vllm_metrics import VllmCollector
@@ -69,6 +72,7 @@ def _point(snapshot: dict[str, Any]) -> dict[str, Any]:
         "ttft_p95": round(agg["ttft_p95_ms"], 2), "tpot_p95": round(agg["tpot_p95_ms"], 2), "running": agg["running"], "waiting": agg["waiting"],
         "kv_cache": round(agg["kv_cache_percent"], 2), "gpu": snapshot["gpu"]["utilization"], "gpu_memory": snapshot["gpu"]["memory_percent"],
         "cpu": snapshot["host"]["cpu"]["usage"], "memory": snapshot["host"]["memory"]["percent"], "power": snapshot["gpu"]["power_w"],
+        "disk": round(snapshot["host"]["disk"]["percent"], 2), "net": round((snapshot["host"]["network"]["rx_bps"] + snapshot["host"]["network"]["tx_bps"]) / 1_000_000, 2),
         "bmc_power": float(snapshot.get("bmc", {}).get("power", {}).get("instant_w", 0)),
     }
 
@@ -83,6 +87,8 @@ async def collect_loop() -> None:
             bmc_task = asyncio.to_thread(bmc_collector.collect)
             host, gpu, bmc, vllm = await asyncio.gather(host_task, gpu_task, bmc_task, vllm_collector.collect())
             snapshot = {"status": "ok", "timestamp": time.time(), "sample_interval": SAMPLE_INTERVAL, "host": host, "gpu": gpu, "bmc": bmc, "vllm": vllm}
+            snapshot["gpu_map"] = resolve_gpu_map(gpu["items"], vllm["instances"])
+            snapshot["small_models"] = _scan_small_services(snapshot["gpu_map"], vllm["instances"])
             snapshot["alerts"] = _alerts(host, gpu, vllm, bmc)
             point = _point(snapshot)
             realtime.append(point)
@@ -113,6 +119,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=APP_NAME, version="1.1.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.add_middleware(GZipMiddleware, minimum_size=900)
 
 
@@ -152,6 +159,79 @@ async def current_state():
 async def history(range: str = Query("1h", pattern="^(15m|1h|6h|24h|7d)$")):
     seconds = {"15m": 900, "1h": 3600, "6h": 21600, "24h": 86400, "7d": 604800}[range]
     return {"range": range, "points": await asyncio.to_thread(history_store.read, seconds)}
+
+
+# 浙江滨江 商业用电（单一制不满1千伏，2026年9月价，国网浙江代理购电公告）
+_ENERGY_PRICE_FLAT = 0.736945    # 平段/非分时 元/度
+_ENERGY_PRICE_PEAK = 1.133475    # 高峰 元/度
+_ENERGY_PRICE_VALLEY = 0.457041  # 低谷 元/度
+
+
+def _tou_price_utc(ts: float) -> float:
+    """按北京时间时段取电价（samples.ts 为 UTC）。"""
+    lt = time.gmtime(ts + 8 * 3600)
+    hm = lt.tm_hour * 60 + lt.tm_min
+    month = lt.tm_mon
+    summer = month in (1, 7, 8, 12)
+    if hm < 420 or (660 <= hm < 840):
+        return _ENERGY_PRICE_VALLEY
+    if summer and 1080 <= hm < 1320:  # 夏冬季尖峰 18:00-22:00
+        return _ENERGY_PRICE_PEAK
+    if (420 <= hm < 660) or (840 <= hm < 960) or hm >= 1380:
+        return _ENERGY_PRICE_FLAT
+    return _ENERGY_PRICE_PEAK
+
+
+def _cumulative_energy() -> dict[str, Any]:
+    """从全部历史样本积分：累计电量(kWh) + 按时段电价折算的累计电费(元)。
+    v1.1.1: 额外计算本月/本年累计电费（预算进度条用，后台自动按自然月/年切分）。"""
+    import json as _json
+    import sqlite3 as _sqlite3
+    from datetime import datetime as _dt
+    try:
+        conn = _sqlite3.connect(history_store.path, timeout=8)
+        rows = conn.execute("SELECT ts, payload FROM samples ORDER BY ts").fetchall()
+        conn.close()
+    except Exception:
+        return {"kwh": 0.0, "cost": 0.0, "days": 0, "cost_month": 0.0, "cost_year": 0.0}
+    now = _dt.now()
+    try:
+        month_start = _dt(now.year, now.month, 1).timestamp()
+        year_start = _dt(now.year, 1, 1).timestamp()
+    except Exception:
+        month_start = year_start = 0.0
+    total_kwh = 0.0
+    cost = 0.0
+    cost_month = 0.0
+    cost_year = 0.0
+    prev = None
+    for ts, payload in rows:
+        try:
+            power = _json.loads(payload).get("power") or 0.0
+        except Exception:
+            power = 0.0
+        if prev is not None:
+            dt_h = (ts - prev[0]) / 3600.0
+            if 0 < dt_h < 1.0:  # 忽略采集空洞
+                kwh = prev[1] / 1000.0 * dt_h
+                money = kwh * _tou_price_utc(prev[0])
+                total_kwh += kwh
+                cost += money
+                if prev[0] >= month_start:
+                    cost_month += money
+                if prev[0] >= year_start:
+                    cost_year += money
+        prev = (ts, power)
+    days = 0
+    if rows:
+        days = max(1, round((rows[-1][0] - rows[0][0]) / 86400.0))
+    return {"kwh": round(total_kwh, 1), "cost": round(cost, 2), "days": days,
+            "cost_month": round(cost_month, 2), "cost_year": round(cost_year, 2)}
+
+
+@app.get("/api/energy")
+async def energy():
+    return await asyncio.to_thread(_cumulative_energy)
 
 
 @app.get("/api/stream")
