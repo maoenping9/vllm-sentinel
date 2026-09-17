@@ -13,6 +13,8 @@ export interface Point {
   memory: number
   power: number
   bmc_power: number
+  disk: number
+  net: number
 }
 
 export interface BmcSensor {
@@ -46,6 +48,7 @@ export interface GpuItem {
   index: number
   uuid: string
   name: string
+  service?: string
   utilization: number
   memory_utilization: number
   memory_total_mb: number
@@ -56,6 +59,8 @@ export interface GpuItem {
   power_w: number
   power_limit_w: number
   fan_percent: number
+  fan_pwm?: number
+  fan_rpm?: number
   clock_sm_mhz: number
   clock_memory_mhz: number
   pstate: string
@@ -68,6 +73,7 @@ export interface VllmInstance {
   online: boolean
   error: string
   models: string[]
+  gpus?: number[]
   running: number
   waiting: number
   swapped: number
@@ -104,6 +110,8 @@ export interface Snapshot {
     network: {rx_bps:number; tx_bps:number}
   }
   gpu: {count:number; items:GpuItem[]; utilization:number; memory_total_mb:number; memory_used_mb:number; memory_percent:number; power_w:number; max_temperature:number}
+  gpu_map?: Array<{service:string; gpus:number[]; port?:number}>
+  small_models?: Array<{name:string; port?:number}>
   bmc: BmcState
   vllm: {
     instances: VllmInstance[]

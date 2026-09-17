@@ -31,6 +31,23 @@ def _quantile(samples: dict[float, float], percentile: float) -> float:
 class VllmCollector:
     def __init__(self) -> None:
         self.previous: dict[tuple[str, str], tuple[float, float]] = {}
+        self._disc_cache: list[dict[str, object]] = []
+        self._disc_at: float = 0.0
+
+    def _targets(self) -> list[VllmTarget]:
+        """纯自动发现：直接取当前运行中的 vLLM 进程合集（关了就从列表消失、开了就出现）。
+        仅当发现为空（全部 vLLM 未运行）时兜底到 .env 配置，避免列表意外清空。"""
+        now = time.time()
+        if not self._disc_cache or now - self._disc_at > 5.0:
+            try:
+                from .discovery import discover_vllm_targets
+                self._disc_cache = discover_vllm_targets()
+            except Exception:
+                self._disc_cache = []
+            self._disc_at = now
+        if self._disc_cache:
+            return [VllmTarget(str(t["name"]), str(t["url"])) for t in self._disc_cache]
+        return list(TARGETS)
 
     def _rate(self, target: str, metric: str, value: float, now: float) -> float:
         key = (target, metric)
@@ -39,6 +56,21 @@ class VllmCollector:
         if not previous or value < previous[1]:
             return 0.0
         return max(0.0, (value - previous[1]) / max(0.01, now - previous[0]))
+
+    def _offline(self, target: VllmTarget, error: Exception) -> dict[str, Any]:
+        """某个 vLLM 实例取不到指标时返回的零值结构（避免在异常路径写一长串字面量）。"""
+        item: dict[str, Any] = {"name": target.name, "url": target.url, "online": False, "error": str(error), "models": []}
+        for key in (
+            "running", "waiting", "swapped", "kv_cache_percent",
+            "prompt_tokens_total", "generation_tokens_total", "requests_total",
+            "prompt_tokens_per_second", "generation_tokens_per_second", "requests_per_second",
+            "prefix_cache_hit_percent", "spec_accept_percent",
+            "ttft_p50_ms", "ttft_p95_ms", "ttft_p99_ms",
+            "tpot_p50_ms", "tpot_p95_ms", "tpot_p99_ms",
+            "e2e_p95_ms", "queue_p95_ms",
+        ):
+            item[key] = 0.0
+        return item
 
     async def _one(self, client: httpx.AsyncClient, target: VllmTarget) -> dict[str, Any]:
         now = time.time()
@@ -89,9 +121,9 @@ class VllmCollector:
                 "running": total("vllm:num_requests_running"), "waiting": total("vllm:num_requests_waiting"), "swapped": total("vllm:num_requests_swapped"),
                 "kv_cache_percent": total("vllm:kv_cache_usage_perc") * 100,
                 "prompt_tokens_total": prompt_total, "generation_tokens_total": generation_total, "requests_total": success_total,
-                "prompt_tokens_per_second": self._rate(target.name, "prompt", prompt_total, now),
-                "generation_tokens_per_second": self._rate(target.name, "generation", generation_total, now),
-                "requests_per_second": self._rate(target.name, "requests", success_total, now),
+                "prompt_tokens_per_second": self._rate(target.url, "prompt", prompt_total, now),
+                "generation_tokens_per_second": self._rate(target.url, "generation", generation_total, now),
+                "requests_per_second": self._rate(target.url, "requests", success_total, now),
                 "prefix_cache_hit_percent": prefix_hits / prefix_queries * 100 if prefix_queries else 0,
                 "spec_accept_percent": accepted / draft * 100 if draft else 0,
                 "ttft_p50_ms": _quantile(ttft, .5) * 1000, "ttft_p95_ms": _quantile(ttft, .95) * 1000, "ttft_p99_ms": _quantile(ttft, .99) * 1000,
@@ -99,11 +131,12 @@ class VllmCollector:
                 "e2e_p95_ms": _quantile(e2e, .95) * 1000, "queue_p95_ms": _quantile(queue, .95) * 1000,
             }
         except (httpx.HTTPError, ValueError) as error:
-            return {"name": target.name, "url": target.url, "online": False, "error": str(error), "models": [], "running": 0, "waiting": 0, "swapped": 0, "kv_cache_percent": 0, "prompt_tokens_total": 0, "generation_tokens_total": 0, "requests_total": 0, "prompt_tokens_per_second": 0, "generation_tokens_per_second": 0, "requests_per_second": 0, "prefix_cache_hit_percent": 0, "spec_accept_percent": 0, "ttft_p50_ms": 0, "ttft_p95_ms": 0, "ttft_p99_ms": 0, "tpot_p50_ms": 0, "tpot_p95_ms": 0, "tpot_p99_ms": 0, "e2e_p95_ms": 0, "queue_p95_ms": 0}
+            return self._offline(target, error)
 
     async def collect(self) -> dict[str, Any]:
+        targets = self._targets()
         async with httpx.AsyncClient(timeout=4.0, follow_redirects=False) as client:
-            instances = [await self._one(client, target) for target in TARGETS]
+            instances = [await self._one(client, target) for target in targets]
         keys = ["running", "waiting", "swapped", "prompt_tokens_total", "generation_tokens_total", "requests_total", "prompt_tokens_per_second", "generation_tokens_per_second", "requests_per_second"]
         aggregate = {key: sum(float(item[key]) for item in instances) for key in keys}
         online = [item for item in instances if item["online"]]

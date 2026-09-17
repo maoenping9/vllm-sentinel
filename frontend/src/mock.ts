@@ -9,6 +9,7 @@ const points = Array.from({length: 120}, (_, index) => ({
   running: Math.round(wave(index, 9, 3)), waiting: Math.max(0, Math.round(wave(index+8, 2, 2))),
   kv_cache: wave(index, 67, 5), gpu: wave(index+2, 82, 9), gpu_memory: wave(index, 73, 1),
   cpu: wave(index+10, 36, 8), memory: wave(index, 10.4, .2), power: wave(index, 941, 80), bmc_power: wave(index, 1180, 110),
+  disk: wave(index, 31.7, 3), net: wave(index+3, 16.6, 3),
 }))
 
 const instance = {

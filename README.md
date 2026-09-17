@@ -1,8 +1,21 @@
 # vLLM Sentinel
 
-面向多 GPU vLLM 推理机的实时监控控制台。一个 Docker 命令拉起，同时看模型吞吐/延迟、GPU 阵列、主机资源和 BMC 功耗。
+> **v2.0** — 面向多 GPU vLLM 推理机的实时监控控制台 + macOS 桌面 3D 机箱小组件（Übersicht）。
+
+一个 Docker 命令拉起 Web 控制台，同时看模型吞吐/延迟、GPU 阵列、主机资源和 BMC 功耗；桌面小组件以等轴 3D 机箱实时呈现 14 卡（13× CMP 170HX + 3090 Ti）、猫扇/涡轮扇转速、GPU 负载条/功率条、涡轮显卡风扇与前→后气流动画。
+
+v2.0 亮点：
+- **3D 机箱小组件（v90）**：双塔写实造型，等轴旋转摆动画（-26°↔-50°），13×9733 GPU 涡轮风扇、顶/前/后 Noctua 猫扇与 G2 排风，显卡条负载/功率分段条，GPU↔模型实时对照；前端进风 → GPU 卡仓 → 后排排风的气流动画。
+- **Web 控制台**：模型吞吐/延迟、GPU 阵列、主机性能、BMC 功耗（一键 `docker compose up -d`）。
 
 截图来自 `8 × NVIDIA CMP 170HX` 上的 `GLM-5.3-Flash` 生产实例。
+
+## 目录结构
+
+- `backend/` — FastAPI 数据服务（`/api/state` GPU↔模型映射、`/api/energy` BMC 功耗）
+- `frontend/` — React/Vite Web 控制台
+- `desktop/` — macOS Übersicht 3D 机箱小组件（Intel Mac）
+- `docs/screenshots/` — 效果图
 
 ## 效果图
 
