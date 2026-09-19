@@ -234,10 +234,21 @@ class GpuCollector:
     _cors_map: dict[int, list[tuple[str, int]]] | None = None
     _cors_hwmon: dict[str, Path] | None = None
     _cors_ports: dict[str, Path] | None = None
+    # v95：GPU 拓扑变动 / gpu-mapping.conf 热更新后，运行中服务的进程级缓存
+    # 永不刷新，导致新映射的 GPU3/GPU6 风扇恒显示 0（2026-09-20 事故）。
+    # 缓存加 TTL，过期自动重建，配置与拓扑变更 60s 内自愈，无需重启服务。
+    _CACHE_TTL = 60.0
+    _cache_ts: dict[str, float] = {}
+
+    def _cache_fresh(self, key: str) -> bool:
+        return (time.monotonic() - self._cache_ts.get(key, 0.0)) < self._CACHE_TTL
+
+    def _cache_mark(self, key: str) -> None:
+        self._cache_ts[key] = time.monotonic()
 
     def _cors_port_dirs(self) -> dict[str, Path]:
         """Commander hubport（如 "4.3"）→ hwmon 目录，按 HID_PHYS usb 端口段解析。"""
-        if self._cors_ports is not None:
+        if self._cors_ports is not None and self._cache_fresh("ports"):
             return self._cors_ports
         result: dict[str, Path] = {}
         try:
@@ -257,10 +268,11 @@ class GpuCollector:
                         result[port_seg] = d
                     break
         self._cors_ports = result
+        self._cache_mark("ports")
         return result
 
     def _cors_hwmon_dirs(self) -> dict[str, Path]:
-        if self._cors_hwmon is not None:
+        if self._cors_hwmon is not None and self._cache_fresh("hwmon"):
             return self._cors_hwmon
         result: dict[str, Path] = {}
         try:
@@ -275,10 +287,11 @@ class GpuCollector:
                     result[code] = d
                     break
         self._cors_hwmon = result
+        self._cache_mark("hwmon")
         return result
 
     def _cors_mapping(self) -> dict[int, list[tuple[str, int]]]:
-        if self._cors_map is not None:
+        if self._cors_map is not None and self._cache_fresh("cors_map"):
             return self._cors_map
         mapping: dict[int, list[tuple[str, int]]] = {}
         p = Path(HOST_ROOT) / "etc" / "gpu-mapping.conf"
@@ -318,13 +331,14 @@ class GpuCollector:
             if idx is not None and pairs:
                 mapping[idx] = pairs
         self._cors_map = mapping
+        self._cache_mark("cors_map")
         return mapping
 
     _gpu_bus_map: dict[str, int] | None = None
 
     def _gpu_index_by_bus(self, bus_id: str) -> int | None:
         """NVML pci.bus_id（00000000:21:00.0）→ GPU 索引；查不到返回 None。"""
-        if self._gpu_bus_map is None:
+        if self._gpu_bus_map is None or not self._cache_fresh("bus_map"):
             bus_map: dict[str, int] = {}
             try:
                 result = subprocess.run(
@@ -341,6 +355,7 @@ class GpuCollector:
             except (OSError, subprocess.SubprocessError):
                 return None
             self._gpu_bus_map = bus_map
+            self._cache_mark("bus_map")
         return self._gpu_bus_map.get(bus_id.strip().lower())
 
     def _apply_corsair_fans(self, items: list[dict[str, Any]]) -> None:
