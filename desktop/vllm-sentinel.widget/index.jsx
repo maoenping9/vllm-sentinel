@@ -2,7 +2,7 @@
 // vLLM Sentinel — macOS 桌面小组件 (Übersicht)
 // 直接渲染在桌面上：壁纸之上、窗口之下，2 秒实时刷新。
 //
-// 数据源：vLLM Sentinel 控制台 /api/state（your-host, 14 GPU）
+// 数据源：vLLM Sentinel 控制台 /api/state
 // 取数方式：curl（Mac 本地执行，无 CORS 问题）
 //
 // v21 已修复：模型服务"按模型聚合"的 tok/KV 用数值相加（原 num() 返回字符串被
@@ -30,6 +30,14 @@
 //       前面板 3×G1 + 最下 1×12NF
 //     · GPU 仓横向 13 条：每卡一条（温度半 + 功耗条半），实时数据直读 gpu.items
 //     · spinDot 对齐 SVG 圆心（v22 错位修复）；num() 遮蔽崩溃修复（v23 同批）
+//   - v96 网络流量周期（2026-09-22，用户定稿）：
+//     · 新增「网络流量（20日起）」区块：每月 20 号开始到下个月 20 号（跨月周期，含当天）
+//     · 总流量配额 1.5TB（NET_TOTAL_TB），周期累计达 1TB（NET_WARN_TB）时数值与进度条变红
+//     · 周期累计由 tx/rx 瞬时速率积分还原（netCycleTraffic，20 号 00:00 起算）
+//   - v96.1 手工基准（2026-09-22）：
+//     · 用户实测周期内已用 250G，积分只算出 ~80G（单网卡速率漏 Mac/其他设备全网流量）
+//     · NET_USED_GB_OVERRIDE=250：显示与红色判断用 max(积分, 250G)，积分超过后自动切回
+//     · 显示值带 * 后缀表示当前用的是手工基准（积分尚未追上）
 //
 // 安装（Intel Mac）：
 //   1. 安装 Übersicht:  brew install --cask ubersicht
@@ -39,8 +47,8 @@
 //
 
 // ===== 可配置 =====
-const SERVER = "http://your-server-ip:8889"   // vLLM Sentinel 控制台地址
-const REFRESH_MS = 1000                        // 刷新间隔（v81：2000→1000ms，摆动步长减半更流畅）
+const SERVER = "http://your-server-ip:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
+const REFRESH_MS = 2000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
 const HOT_TEMP = 75                           // >= 此温度变红（GPU 负载条 + CPU 温度）
 const OTHER_W = 200                            // 整机功耗估算的"其他"补偿值
 const PSU = "2600 + 2200 W"                    // 电源额定
@@ -48,6 +56,16 @@ const PSU = "2600 + 2200 W"                    // 电源额定
 // TODO: [待确认] 用户说"修改本月额度 年额度"但未给新数值，暂沿用 500/6000
 const MONTH_BUDGET = 500                       // 本月电费预算 元
 const YEAR_BUDGET = 6000                       // 本年电费预算 元
+
+// ===== v96 网络流量周期（2026-09-22 用户定稿）：每月 20 号开始到下个月 20 号 =====
+// 总流量配额 1.5TB，累计达 1TB（≈2/3）时进度条变红提示
+const NET_CYCLE_START_DAY = 20                 // 周期起点：每月 20 号（含当天）
+const NET_TOTAL_TB = 1.5                       // 总流量配额 TB
+const NET_WARN_TB = 1.0                        // 达到此累计流量时标红（红色提示）
+// v96.1 手工基准（2026-09-22）：用户实测"到今天(9/22)为止周期内已用 250G"，
+// 而 /api/state 的 tx/rx 只是服务器单网卡速率（积分仅 ~80G），漏了 Mac/其他设备等全网流量。
+// 显示与红色判断都用 max(积分, OVERRIDE)——今天显示 250G；积分超过 250G 后自动切回积分跟踪。
+const NET_USED_GB_OVERRIDE = 250               // 周期内已用 GB（用户手工实测值，改这里）
 
 // ===== 实时电费（浙江滨江 办公楼商业用电 单一制不满1千伏，2026年9月价，国网浙江代理购电公告） =====
 const PRICE_FLAT = 0.736945                    // 平段/非分时 元/度
@@ -64,8 +82,30 @@ function touPrice(date) {
   return { price: PRICE_PEAK, tier: summer ? "峰" : "峰" }
 }
 
+// ===== v96 网络流量周期函数（每月 20 号 → 下月 20 号，跨月周期） =====
+// 返回 { tb: 周期累计 TB, warn: 是否已达 1TB 红色提示, days: 周期已过天数 }
+// tx/rx 为字节/秒瞬时速率，积分还原周期累计（20 号 00:00 起算，含当天）
+function netCycleTraffic(nowMs, net) {
+  const n = nowMs ? new Date(nowMs) : new Date()
+  const day = n.getDate()
+  const hoursInDay = n.getHours() + n.getMinutes() / 60
+  // 周期起点：day>=20 → 本月 20 号 00:00；day<20 → 上月 20 号 00:00
+  let startMs
+  if (day >= NET_CYCLE_START_DAY) {
+    startMs = new Date(n.getFullYear(), n.getMonth(), NET_CYCLE_START_DAY).getTime()
+  } else {
+    const pm = new Date(n.getFullYear(), n.getMonth(), 0)   // 上月最后一天 → 取上月
+    startMs = new Date(pm.getFullYear(), pm.getMonth(), NET_CYCLE_START_DAY).getTime()
+  }
+  const elapsedHours = Math.max(0, (n.getTime() - startMs) / 3600000)
+  const tbIntegral = ((Number(net.tx_bps) || 0) + (Number(net.rx_bps) || 0)) * elapsedHours * 3600 / 1e12
+  // v96.1：max(积分, 手工基准)——手工基准覆盖积分低估（单网卡速率漏全网流量），积分超过后自动切回
+  const tb = Math.max(tbIntegral, NET_USED_GB_OVERRIDE / 1000)
+  return { tb: tb, integral: tbIntegral, warn: tb >= NET_WARN_TB, days: Math.floor(elapsedHours / 24) }
+}
+
 // ===== 数据拉取 =====
-export const command = `curl -s --max-time 10 --retry 1 --retry-delay 1 ${SERVER}/api/state 2>/dev/null; echo; curl -s --max-time 10 ${SERVER}/api/energy 2>/dev/null`
+export const command = `curl -s --max-time 10 --retry 1 --retry-delay 1 ${SERVER}/api/state?light=1 2>/dev/null; echo; curl -s --max-time 10 ${SERVER}/api/energy 2>/dev/null`
 export const refreshFrequency = REFRESH_MS
 
 // ===== 样式（深海蓝玻璃，与控制台 midnight 主题一致） =====
@@ -203,7 +243,7 @@ const squashAngle = function (nx, ny, nz) {
 }
 
 // ===== 模型配色（每模型固定一种颜色，GPU 行与模型行颜色对应） =====
-// 启动脚本出处（your-server-ip:/tmux/170hx/0903/）：
+// 启动脚本出处（内网温控脚本，见 gpu-fan-control 仓库）：
 //   GLM-5.3-Flash   <- glm5.3-pp8.sh            (CUDA_DEVICES=0,3,12,13, PP4, port 40053)
 //   DSV4-Vision-Exp <- run-dsv4v-vision-pp3.sh  (GPUS=4,5,6,7,8,      PP5, port 40017)
 //   Qwen3.8-27B-W4A16 <- 170-qwen38-* 系列      (单卡: 9/10/11, tmux w4a16-38024/25/27)
@@ -272,6 +312,8 @@ let _lastGoodData = null
 let _lastGoodAt = 0
 let _lastEnergy = null          // 最后一次成功的 /api/energy 数据
 let _lastEnergyAt = 0
+let _netMbEma = null            // v96.2 MB/s EMA 平滑状态（跨渲染保持，抹平逐秒毛刺）
+let _netMbEmaAt = 0
 const STALE_GRACE_MS = 15000   // 断连宽限：最后一次成功数据的保鲜期
 
 export const render = ({ output }) => {
@@ -306,8 +348,10 @@ export const render = ({ output }) => {
     )
   }
 
-  // 补齐已知槽位：驱动失联的卡（探针漏报）合成占位行，保证 14 行齐全
-  const knownSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+  // 补齐已知槽位：驱动失联的卡（探针漏报）合成占位行，保证行数齐全
+  // v96.3 动态化：槽位数跟本机实际显卡数对应（不再 hardcode 14）——15 卡机（GPU0-14）全量显示
+  const GPU_COUNT = Math.max(((data.gpu && data.gpu.items) || []).length, 14)
+  const knownSlots = Array.from({ length: GPU_COUNT }, function (_, i2) { return i2 })
   const seenIdx = {}
   ;((data.gpu && data.gpu.items) || []).forEach(function (g2) { seenIdx[g2.index] = true })
   const missingSlots = knownSlots.filter(function (i2) { return !seenIdx[i2] }).map(function (i2) {
@@ -322,6 +366,15 @@ export const render = ({ output }) => {
   const mem = (data.host.memory) || {}
   const net = (data.host.network) || {}
   const disk = (data.host.disk) || {}
+  // v96.2 MB/s EMA 平滑：α=0.3（新样本权重 30%），突发毛刺抹平、趋势仍实时；
+  // 数据新鲜时才更新（沿用旧值的断连场景不更新，避免假平稳）
+  if (data.host === _lastGoodData?.host || data === _lastGoodData) {
+    if (net.tx_bps !== undefined || net.rx_bps !== undefined) {
+      const mbNow = ((Number(net.tx_bps) || 0) + (Number(net.rx_bps) || 0)) / 1048576
+      _netMbEma = _netMbEma === null ? mbNow : _netMbEma * 0.7 + mbNow * 0.3
+      _netMbEmaAt = Date.now()
+    }
+  }
   const modelGpuMap = {}
   // 动态归属：后端 /api/state 已按进程实时解析"GPU→模型"（data.gpu.items[*].service 与 gpu_map）。
   // GPU 序号 / 运行模型变化时自动更新；组件只做"服务名 → 规范模型名"归一，不再写死 GPU 清单。
@@ -383,6 +436,8 @@ export const render = ({ output }) => {
   const modelsTotal = modelRows.length
   const gpuW = Number((data.gpu && data.gpu.power_w) || 0)   // 数字（v21 字符串拼接 bug 同源：num() 返回字符串，"+ OTHER_W" 会拼成 "1669200"）
   const totalW = gpuW + OTHER_W
+  // v96 网络流量周期：每月 20 号 → 下月 20 号，1.5TB 配额，达 1TB 红色提示
+  const nc = netCycleTraffic(Date.now(), net)
   const stamp = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--"
 
   return (
@@ -473,7 +528,7 @@ export const render = ({ output }) => {
       <div style={styles.barRow}>
         <span style={styles.kvLabel}>本月额度</span>
         <span style={styles.barWrap}>
-          <i style={{ ...styles.barFill, width: clamp01(energy && typeof energy.cost_month === "number" ? energy.cost_month / MONTH_BUDGET * 100 : 0) + "%", ...(energy && typeof energy.cost_month === "number" && energy.cost_month > MONTH_BUDGET * 0.9 ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
+          <i style={{ ...styles.barFill, width: clamp01(energy && typeof energy.cost_month_est === "number" ? energy.cost_month_est / MONTH_BUDGET * 100 : (energy && typeof energy.cost_month === "number" ? energy.cost_month / MONTH_BUDGET * 100 : 0)) + "%", ...(energy && typeof (energy.cost_month_est || energy.cost_month) === "number" && (energy.cost_month_est || energy.cost_month) > MONTH_BUDGET * 0.9 ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
         </span>
       </div>
       <div style={styles.barRow}>
@@ -491,9 +546,19 @@ export const render = ({ output }) => {
           <i style={{ ...styles.barFill, width: clamp01(mem.percent) + "%" }} />
         </span>
       </div>
+      {/* v96 网络流量周期（每月 20 号 → 下月 20 号，总配额 1.5TB，达 1TB 红色提示） */}
+      <div style={styles.kvRow}>
+        <span style={styles.kvLabel}>网络流量（20日起）</span>
+        <span style={{ ...styles.kvVal, ...(nc.warn ? { color: "#ef4444" } : {}) }}>{gNum(nc.tb, 2)} / {NET_TOTAL_TB} TB{nc.tb > nc.integral + 0.001 ? " *" : ""}</span>
+      </div>
+      <div style={styles.barRow}>
+        <span style={styles.barWrap}>
+          <i style={{ ...styles.barFill, width: clamp01(nc.tb / NET_TOTAL_TB * 100) + "%", ...(nc.warn ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
+        </span>
+      </div>
       <div style={styles.kvRow}>
         <span style={styles.kvLabel}>磁盘 IO / 网络</span>
-        <span style={styles.kvVal}>{num(disk.write_bps/1048576, 1)}/{num(net.tx_bps/1048576, 1)} MB/s</span>
+        <span style={styles.kvVal}>{num(disk.write_bps/1048576, 1)}/{num(_netMbEma !== null && Date.now() - _netMbEmaAt < STALE_GRACE_MS ? _netMbEma : (net && net.tx_bps ? net.tx_bps/1048576 : 0), 1)} MB/s</span>
       </div>
 
       {/* 3D 双塔机箱旋转图（v26：风扇重映射定稿版；构建期 3D 投影 + 摆动动画） */}
@@ -502,10 +567,14 @@ export const render = ({ output }) => {
         const gpuItems = (data.gpu && data.gpu.items) || []
         const gpuByIndex = {}
         gpuItems.forEach(function (g2) { gpuByIndex[g2.index] = g2 })
-        const gpuRpms13 = Array.from({ length: 13 }, function (_, i2) { return gNum((gpuByIndex[i2] || {}).fan_rpm, 0) })
+        // v96.3 动态化：9733 专属扇 RPM 取 GPU1..GPU_COUNT-1（GPU0=3090Ti 自控豁免）
+        const gpuRpms13 = Array.from({ length: Math.max(1, GPU_COUNT - 1) }, function (_, i2) { return gNum((gpuByIndex[i2 + 1] || {}).fan_rpm, 0) })
         const bmcFans = (data.bmc && data.bmc.fans) || []
         const fanByName = {}
         bmcFans.forEach(function (f2) { fanByName[f2.name] = gNum(f2.value, 0) })
+        // v96.6 Storm3 机箱扇实时档位（ch1/ch2=G2 后排双扇、ch3=G1 前排，gpu-fan-control 温控驱动）
+        // ——此前漏显示：后 G2 用主板 IPMI SYS_FAN6/7、前 G1 硬编码 3450
+        const stormFans = (data.gpu && data.gpu.storm_fans) || {}
         // v26 风扇重映射（2026-09-14 定稿，/etc/gpu-mapping.conf 13×9733 ↔ 13×CMP 全完成）：
         // GPU1-13 各配一颗专属 9733（fan_rpm = PWM×3450 反算，直读 gpu.items）；
         // GPU0=3090Ti 自控不在 1000D 上（豁免）。
@@ -513,9 +582,12 @@ export const render = ({ output }) => {
         //   G2 排风 = SYS_FAN6 + SYS_FAN7（1000D 后部两路 G2，实测 450-600）
         //   CPU = CPU0_FAN（实测 2700-3450）；FCH = FCH_FAN（实测 1500-2700）
         //   12NF（顶 3 + 前面板最下 1）后端无独立读数，按温控曲线同转速近似
-        const rearRpmA = fanByName.SYS_FAN6 || 0      // 后部 G2 路 A
-        const rearRpmB = fanByName.SYS_FAN7 || 0      // 后部 G2 路 B
+        // v96.6: 后 G2 双扇 = Storm3 ch1/ch2（实时温控档位），fallback 主板 IPMI SYS_FAN6/7
+        const rearRpmA = stormFans.g2 || fanByName.SYS_FAN6 || 0
+        const rearRpmB = stormFans.g2b || fanByName.SYS_FAN7 || 0
         const rearRpm = Math.max(rearRpmA, rearRpmB)  // G2 排风代表值（取两路较大）
+        // v96.6: 前 G1 排风 = Storm3 ch3（实时温控档位），fallback 硬编码 3450
+        const frontG1Rpm = stormFans.g1 || 3450
         const cpuFanRpm = fanByName.CPU0_FAN || 0     // CPU 风扇
         const fchRpm = fanByName.FCH_FAN || 0         // FCH 风扇
 
@@ -560,12 +632,12 @@ export const render = ({ output }) => {
           // 拉开不挤——v86 y=40/60/80 间距 20 两排在屏幕上挤到一起）
           // v85：dir="wall" → scale(0.62,1) 竖椭圆不旋转（壁面圆投影 ry/rx≈1.6 高>宽，
           // 横向压跟壁面透视一致；v84 rotate(θ≈-7.7°) 猫扇整体倾斜，用户不要）
-          { c: pj(155, 30, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 30, wz: 25, r: 10, rpm: 3450, kind: "in", dir: "wall" },
-          { c: pj(155, 62, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 62, wz: 25, r: 10, rpm: 3450, kind: "in", dir: "wall" },
-          { c: pj(155, 94, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 94, wz: 25, r: 10, rpm: 3450, kind: "in", dir: "wall" },
-          { c: pj(155, 30, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 30, wz: -30, r: 10, rpm: 3450, kind: "in", dir: "wall" },
-          { c: pj(155, 62, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 62, wz: -30, r: 10, rpm: 3450, kind: "in", dir: "wall" },
-          { c: pj(155, 94, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 94, wz: -30, r: 10, rpm: 3450, kind: "in", dir: "wall" },
+          { c: pj(155, 30, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 30, wz: 25, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
+          { c: pj(155, 62, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 62, wz: 25, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
+          { c: pj(155, 94, 25), nx: -1, ny: 0, nz: 0, wx: 155, wy: 94, wz: 25, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
+          { c: pj(155, 30, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 30, wz: -30, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
+          { c: pj(155, 62, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 62, wz: -30, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
+          { c: pj(155, 94, -30), nx: -1, ny: 0, nz: 0, wx: 155, wy: 94, wz: -30, r: 10, rpm: frontG1Rpm, kind: "in", dir: "wall" },
           // 最下 12NF 进风（右外壁 x=155 壁面圆 z=-10，v85 靠最下 y=150；v84 y=125 夹在 G1 之间）
           { c: pj(155, 150, -10), nx: -1, ny: 0, nz: 0, wx: 155, wy: 150, wz: -10, r: 6.5, rpm: 3450, kind: "in", dir: "wall" },
           // 后面 4×G2 排风（v89：z=22→28——卡条 z=45→50 前移后 -50° 极端角度
@@ -589,7 +661,8 @@ export const render = ({ output }) => {
         // 正面板之间（x=100, z=52，卡条 z=45 与正面 z=55 的中前位），不再是卡条后方延伸线
         // v69：风扇停转标红——GPU1-13 9733 专属扇：卡在线且 fan_rpm=0 → 停转红；
         //   GPU0=3090Ti 自带扇有 0dB 停转模式，不判（豁免）；G2(后) 由 rearRpm=0 判停
-        const GPU_FANS13 = Array.from({ length: 14 }, function (_, i2) {
+        // v96.3 动态化：扇数跟本机实际显卡数对应（GPU0-GPU_COUNT-1，每卡一颗）
+        const GPU_FANS13 = Array.from({ length: GPU_COUNT }, function (_, i2) {
           // v90：y=18+i*10 跟随卡条新间距/起点（slab_y+3）；x=130→132（卡条右缘
           // 120→106 后扇离卡条更远更清晰）；z=53（卡条 50 前）；r=4.4（涡轮扇）
           const y = 18 + i2 * 10
@@ -619,7 +692,8 @@ export const render = ({ output }) => {
         // （再缩一点）+ 起点 y=13→15——风扇（x=132）与序号（offset 8）明显拉开距离
         const SLAB_H = 6, SLAB_Z = 50
         const SLAB_L = -110, SLAB_R = 106
-        const slabs13 = Array.from({ length: 14 }, function (_, i2) {
+        // v96.3 动态化：卡条数跟本机实际显卡数对应（GPU0-GPU_COUNT-1 全量）
+        const slabs13 = Array.from({ length: GPU_COUNT }, function (_, i2) {
           const g2 = gpuByIndex[i2] || {}
           const mInfo = modelGpuMap[i2]
           const y = 15 + i2 * 10
@@ -627,7 +701,7 @@ export const render = ({ output }) => {
             idx: i2, y: y,
             tl: pj(SLAB_L, y, SLAB_Z), tr: pj(SLAB_R, y, SLAB_Z),
             bl: pj(SLAB_L, y + SLAB_H, SLAB_Z), br: pj(SLAB_R, y + SLAB_H, SLAB_Z),
-            util: gNum(g2.utilization, 0), mem: gNum(g2.memory_percent, 0), pw: gNum(g2.power_w, 0),
+            util: gNum(g2.utilization, 0), mem: gNum(g2.memory_percent, 0), pw: gNum(g2.power_w, 0), temp: gNum(g2.temperature, 0),
             hot: gNum(g2.temperature, 0) >= HOT_TEMP,
             idle: !g2._missing && !(mInfo && mInfo.model),
             missing: !!g2._missing,
@@ -878,17 +952,25 @@ export const render = ({ output }) => {
                     ) })
                     // —— 显卡仓卡条（内部 z=50，按自身深度参与排序） ——
                     slabs13.forEach(function (s2, i2) {
-                      // v89：负载条缩短 1/3（110→73），功率条加长（65+60→40+80，
-                      // 100% 时功率条到卡条右缘 120），分隔线挪 38.5..40
+                      // v96.5：右半功率段切一半为温度段（用户定稿）——
+                      // 显存段（左半，模型色）：-110 → -110+108×memLen（最长 -2）
+                      // 功率段（右半左半）：2 → 2+52×pwLen（最长 54）；功率 >=200W 黄色 #fbbf24
+                      // 温度段（右半右半）：54 → 54+52×tempLen（最长 106）；温度 >=75°C 红色 #ef4444
+                      // 分隔线：-2..2（显存|功率）+ 52..56（功率|温度）
                       const memLen = Math.max(0.02, Math.min(1, s2.mem / 100))
                       const pwLen = Math.max(0, Math.min(1, s2.pw / 350))
+                      const tempLen = Math.max(0, Math.min(1, s2.temp / 100))
                       const loadColor = (s2.missing ? "#ef4444" : s2.hot ? "#ef4444" : (s2.mColor || (s2.idle ? "#64748b" : "#6e8cff")))
+                      const pwColor = s2.pw >= 200 ? "#fbbf24" : (s2.pw > 50 ? "#6e8cff" : "#4e6bd0")
+                      const tempColor = s2.temp >= HOT_TEMP ? "#ef4444" : "#7ee2a8"
                       faces.push({ z: -50, el: (
                         <g key={"sl" + i2}>
                           <polygon points={poly([s2.tl, s2.tr, s2.br, s2.bl])} fill="url(#slabMetal)" stroke="#9aa6b4" strokeWidth="0.5" />
-                          <polygon points={poly(slabSeg(s2, SLAB_L, SLAB_L + 66 * memLen))} fill={loadColor} opacity={s2.mem > 0 ? ".92" : ".25"} />
-                          <polygon points={poly(slabSeg(s2, 32, 32 + 74 * pwLen))} fill={s2.pw > 50 ? "#6e8cff" : "#4e6bd0"} opacity={s2.pw > 0 ? ".9" : ".25"} />
-                          <polygon points={poly(slabSeg(s2, 30.5, 32))} fill="#04080f" opacity=".9" />
+                          <polygon points={poly(slabSeg(s2, SLAB_L, SLAB_L + 108 * memLen))} fill={loadColor} opacity={s2.mem > 0 ? ".92" : ".25"} />
+                          <polygon points={poly(slabSeg(s2, 2, 2 + 52 * pwLen))} fill={pwColor} opacity={s2.pw > 0 ? ".9" : ".25"} />
+                          <polygon points={poly(slabSeg(s2, 54, 54 + 52 * tempLen))} fill={tempColor} opacity={s2.temp > 0 ? ".9" : ".25"} />
+                          <polygon points={poly(slabSeg(s2, -2, 2))} fill="#04080f" opacity=".9" />
+                          <polygon points={poly(slabSeg(s2, 52, 56))} fill="#04080f" opacity=".9" />
                           {[-100, -85, -75, -60, -45, -30, -15, 0, 15, 28, 40, 55, 70, 88].map(function (fx, k2) {
                             return <line key={"fin" + i2 + "-" + k2} x1={pj(fx, s2.y, SLAB_Z)[0].toFixed(1)} y1={pj(fx, s2.y, SLAB_Z)[1].toFixed(1)} x2={pj(fx, s2.y + SLAB_H, SLAB_Z)[0].toFixed(1)} y2={pj(fx, s2.y + SLAB_H, SLAB_Z)[1].toFixed(1)} stroke="#0a0f16" strokeWidth="0.4" opacity=".35" />
                           })}
@@ -991,7 +1073,7 @@ export const render = ({ output }) => {
                 {chip(FANS3D[9].c[0] + 12, FANS3D[9].c[1] - 4, "前NF", true)}
                 {chip(FANS3D[10].c[0] - 12, FANS3D[10].c[1] - 4, "后 4×G2 " + rearRpm, rearRpm > 0)}
                 {chip(FANS3D[14].c[0] - 12, FANS3D[14].c[1] + 6, "后NF", rearRpm > 0)}
-                {chip(6, 204, "9733×13 · " + gpuRpms13.filter(function (r) { return r > 0 }).length + "转", gpuRpms13.some(function (r) { return r > 0 }))}
+                {chip(6, 204, "9733×" + (GPU_COUNT - 1) + " · " + gpuRpms13.filter(function (r) { return r > 0 }).length + "转", gpuRpms13.some(function (r) { return r > 0 }))}
                 {chip(6, 222, "CPU " + cpuFanRpm + " · FCH " + fchRpm, cpuFanRpm > 0 || fchRpm > 0)}
               </div>
             </div>

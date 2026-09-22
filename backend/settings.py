@@ -35,7 +35,7 @@ def _targets() -> list[VllmTarget]:
 
 TARGETS = _targets()
 SAMPLE_INTERVAL = max(1.0, float(os.getenv("SAMPLE_INTERVAL", "2")))
-HISTORY_RETENTION_HOURS = max(1, int(os.getenv("HISTORY_RETENTION_HOURS", "168")))
+HISTORY_RETENTION_HOURS = max(1, int(os.getenv("HISTORY_RETENTION_HOURS", "744")))  # 31天，覆盖自然月电费统计
 DATA_DIR = os.getenv("DATA_DIR", "/data")
 BMC_STATE_FILE = os.getenv("BMC_STATE_FILE", os.path.join(DATA_DIR, "bmc-state.json"))
 BMC_SAMPLE_INTERVAL = max(3.0, float(os.getenv("BMC_SAMPLE_INTERVAL", "5")))

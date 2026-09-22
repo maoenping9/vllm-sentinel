@@ -8,6 +8,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+try:  # 可选的 Storm3 串口读取所需（仅 Linux）
+    import fcntl
+    import termios
+except Exception:  # pragma: no cover
+    fcntl = termios = None
+
 from .settings import HOST_ROOT
 
 
@@ -201,10 +207,14 @@ class GpuCollector:
                 "processes": processes.get(value["uuid"], []),
             })
         self._apply_corsair_fans(items)
+        # v96.6: Storm3 机箱扇实时档位（ch1/ch2=G2 后排双扇、ch3=G1 前排，gpu-fan-control 温控驱动）
+        # ——这三个通道的转速此前漏显示（widget 后 G2 用主板 IPMI SYS_FAN6/7、前 G1 硬编码 3450）
+        storm_fans = self._storm_chassis_rpm()
         total_mem = sum(item["memory_total_mb"] for item in items)
         used_mem = sum(item["memory_used_mb"] for item in items)
         return {
             "count": len(items), "items": items,
+            "storm_fans": storm_fans,
             "utilization": round(sum(item["utilization"] for item in items) / len(items), 1) if items else 0,
             "memory_total_mb": total_mem, "memory_used_mb": used_mem, "memory_percent": round(used_mem/total_mem*100, 1) if total_mem else 0,
             "power_w": round(sum(item["power_w"] for item in items), 1), "max_temperature": max((item["temperature"] for item in items), default=0),
@@ -245,6 +255,89 @@ class GpuCollector:
 
     def _cache_mark(self, key: str) -> None:
         self._cache_ts[key] = time.monotonic()
+
+    # ---- BOSS Storm3（CH340 串口）风机盒（v97）：mapping 里的 "STORM:ch"（ch=1-8）----
+    # 风暴盒不像 Corsair 有系统 hwmon，走串口指令读各通道档位(0-127)，无 tach 转速——
+    # 满速按与 Corsair 一致的 3450 RPM 线性换算（用户确认：满速同 3450）：
+    #   RPM = level/127 × FAN_MAX_RPM。串口与 gpu-fan-control(--storm) 共用，只读不写，
+    #   并加 30s 缓存（SAMPLE_INTERVAL=2Hz 下最多 1/30s 打一次串口），失败静默保持 0。
+    _STORM_PORT = os.environ.get("STORM_PORT", "/dev/ttyUSB0")
+    _STORM_LEVELS_TTL = 30.0
+    _storm_levels: dict[int, int] | None = None
+    _storm_levels_ts: float = 0.0
+
+    def _storm_levels_read(self) -> dict[int, int]:
+        """读风暴盒 get_LEVELS，返回 {ch: level(0-127)}；串口不可用/失败返回 {}。"""
+        if (self._storm_levels is not None
+                and time.monotonic() - self._storm_levels_ts < self._STORM_LEVELS_TTL):
+            return self._storm_levels
+        result: dict[int, int] = {}
+        if fcntl is None or termios is None:
+            return result
+        port = self._STORM_PORT
+        try:
+            fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+        except OSError:
+            return result
+        try:
+            # 配置 2000000 baud 8N1 raw（无 cfsetispeed 时直接置 cflag 速率位）
+            attrs = termios.tcgetattr(fd)
+            baud = getattr(termios, "B2000000", 0x10000000)  # B2000000 cflag 宏（Linux）
+            attrs[1] &= ~(termios.OPOST)          # raw output
+            attrs[3] &= ~(termios.ECHO | termios.ICANON | termios.ISIG | termios.IEXTEN)  # raw input
+            cflag = baud | termios.CS8 | termios.CREAD | termios.CLOCAL
+            # 清除旧速率/字节位后写入
+            attrs[0] = (attrs[0] & ~(termios.CBAUD | termios.CSIZE | termios.CSTOPB | termios.PARENB)) | cflag
+            if hasattr(termios, "cfsetispeed"):
+                termios.cfsetispeed(attrs, baud)
+                termios.cfsetospeed(attrs, baud)
+            attrs[6][termios.VMIN] = 0            # read 不阻塞
+            attrs[6][termios.VTIME] = 2           # 0.2s 超时
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
+            fcntl.fcntl(fd, fcntl.F_SETFL, 0)     # 清非阻塞
+            os.write(fd, b"get_LEVELS")
+            time.sleep(0.3)
+            data = b""
+            try:
+                while True:
+                    chunk = os.read(fd, 64)
+                    if not chunk:
+                        break
+                    data += chunk
+                    if len(data) >= 9:
+                        break
+            except OSError:
+                pass
+            # get_LEVELS 返回 8 通道字节 + 结束符；每通道字节 = level*2
+            for ch in range(1, 9):
+                if len(data) >= ch:
+                    lvl = data[ch - 1] // 2
+                    if 0 <= lvl <= 127:
+                        result[ch] = lvl
+        except OSError:
+            pass
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        self._storm_levels = result
+        self._storm_levels_ts = time.monotonic()
+        return result
+
+    def _storm_chassis_rpm(self) -> dict[str, float]:
+        """Storm3 机箱扇档位 → RPM（ch1/ch2=G2 后排双扇、ch3=G1 前排）。
+        串口不可用时返回 {}（widget 回退主板 IPMI/硬编码）。"""
+        levels = self._storm_levels_read()
+        if not levels:
+            return {}
+        out: dict[str, float] = {}
+        for key, ch in (("g2", 1), ("g2b", 2), ("g1", 3)):
+            lv = levels.get(ch)
+            if lv is None:
+                continue
+            out[key] = round(lv / 127 * self.FAN_MAX_RPM, 0)
+        return out
 
     def _cors_port_dirs(self) -> dict[str, Path]:
         """Commander hubport（如 "4.3"）→ hwmon 目录，按 HID_PHYS usb 端口段解析。"""
@@ -366,7 +459,16 @@ class GpuCollector:
             if not entry:
                 continue
             pwm_best = 0
+            storm_level: int | None = None
             for dev, pin in entry:
+                # v97：风暴盒 STORM:<ch>（BOSS Storm3 串口，ch=1-8，档位 0-127）——
+                # 无 hwmon 无 tach，走串口读档位后换算 RPM（满速 3450 与 Corsair 一致）
+                if dev == "STORM":
+                    level = self._storm_levels_read().get(pin)
+                    if level is None:
+                        continue
+                    storm_level = max(storm_level or 0, level)
+                    continue
                 # v27 查找顺序：①序列号字母（A/B/C/D）→ ②dev 标签（1000D-3-X.Y）按
                 #   _CORS_LABEL_SERIAL 解析序列号再定位 hwmon（温控软件写 pwm 的同一设备）
                 #   → ③HID_PHYS usb 端口段（兜底）
@@ -387,7 +489,12 @@ class GpuCollector:
                 pwm = _num(_text(hwdir / f"pwm{pin}"))
                 if pwm > pwm_best:
                     pwm_best = pwm
-            if pwm_best > 0:
+            if storm_level is not None:
+                # STORM 档位(0-127) → RPM：满速 127 = FAN_MAX_RPM(3450)，与 Corsair 同口径
+                it["fan_pwm"] = round(storm_level)
+                it["fan_percent"] = round(storm_level / 127 * 100, 1)
+                it["fan_rpm"] = round(storm_level / 127 * self.FAN_MAX_RPM, 0)
+            elif pwm_best > 0:
                 it["fan_pwm"] = round(pwm_best)
                 it["fan_percent"] = round(pwm_best / 255 * 100, 1)
                 it["fan_rpm"] = round(pwm_best / 255 * self.FAN_MAX_RPM, 0)

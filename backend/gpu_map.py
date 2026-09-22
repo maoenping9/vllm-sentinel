@@ -117,6 +117,14 @@ def _instance_from_cmdline(cmd: str, port_to_name: dict[int, str]) -> tuple[str,
             mm = re.search(r"\bserve\s+(\S+)", cmd)
             label = mm.group(1) if mm else f"port:{port}"
         return label, port
+    # v93 兜底：容器化 vLLM 主进程（uvicorn 默认 8000，cmdline 无 --port 旗标）——
+    # 用 served-model-name / model 目录名识别，端口取 0（仅作占位，GPU 归属靠服务名聚合）
+    sm = re.search(r"--served-model-name\s+(\S+)", cmd)
+    if sm:
+        return sm.group(1), 0
+    mm = re.search(r"(?:\bvllm\s+serve\b|api_server)\s+(?:--model\s+)?(\S+)", cmd)
+    if mm:
+        return Path(mm.group(1)).name, 0
     return None
 
 
@@ -169,19 +177,30 @@ def resolve(gpu_items: list[dict[str, Any]], vllm_instances: list[dict[str, Any]
     for meta in svc_to_meta.values():
         meta["gpus"] = sorted(meta["gpus"])
 
-    # 回填 vllm.instances[*].gpus：按实例自身端口匹配（同名多实例也不会互相污染）
+    # 回填 vllm.instances[*].gpus：按实例自身端口匹配（同名多实例也不会互相污染）；
+    # v93：占位端口 0 的服务（容器化 vLLM，cmdline 无 --port）按服务名匹配——
+    # 实例名与 gpu_owner 服务名一致（同源于 served-model-name）且唯一时回填
     port_gpus: dict[int, list[int]] = {}
     for idx, (svc, port) in gpu_owner.items():
         port_gpus.setdefault(port, []).append(idx)
     for plist in port_gpus.values():
         plist.sort()
+    name_gpus: dict[str, list[int]] = {}
+    for svc, meta in svc_to_meta.items():
+        if meta.get("port") == 0:
+            name_gpus[svc] = meta["gpus"]
     for inst in vllm_instances:
         url = (inst.get("url") or "").rstrip("/")
         try:
             port = int(url.rsplit(":", 1)[1])
         except (ValueError, IndexError):
             port = None
-        inst["gpus"] = list(port_gpus[port]) if port in port_gpus else []
+        if port in port_gpus:
+            inst["gpus"] = list(port_gpus[port])
+        elif inst.get("name") in name_gpus:
+            inst["gpus"] = list(name_gpus[inst["name"]])
+        else:
+            inst["gpus"] = []
 
     # 回填 gpu.items[*].service
     for g in gpu_items:

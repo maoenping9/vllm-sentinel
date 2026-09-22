@@ -23,5 +23,5 @@ RUN mkdir -p /data && chown -R sentinel:sentinel /app /data
 USER sentinel
 EXPOSE 8733
 VOLUME ["/data"]
-HEALTHCHECK --interval=15s --timeout=4s --start-period=15s --retries=3 CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8733/api/health', timeout=3)"]
+HEALTHCHECK --interval=15s --timeout=4s --start-period=15s --retries=3 CMD ["sh", "-c", "python -c \"import os,urllib.request;urllib.request.urlopen('http://127.0.0.1:'+os.getenv('SENTINEL_PORT','8733')+'/api/health',timeout=3)\""]
 CMD ["python", "-m", "backend.run"]
