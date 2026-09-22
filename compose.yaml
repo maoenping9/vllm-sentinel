@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vllm-sentinel:1.1.0
+    image: vllm-sentinel:1.1.1
     container_name: vllm-sentinel
     restart: unless-stopped
     network_mode: host
@@ -14,22 +14,37 @@ services:
     read_only: true
     cap_drop:
       - ALL
+    group_add:
+      # v97: 容器以 uid=sentinel(999) 运行，串口节点 660 root:dialout —— 追加 dialout(gid20)
+      - "20"
     security_opt:
       - no-new-privileges:true
     tmpfs:
       - /tmp:size=64m,mode=1777
+    devices:
+      # v97: 风暴盒(BOSS Storm3, CH341 串口) —— 读 get_LEVELS 换算 GPU3/4/6 RPM
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    device_cgroup_rules:
+      # 本机 cgroup v2 下 --device 未写入 eBPF 设备过滤，需显式放行串口字符设备(188)
+      - "c 188:* rwm"
     volumes:
       - /:/host:ro,rslave
       - sentinel-data:/data
+      # v97: 风暴盒(BOSS Storm3, CH341 串口) RPM 换算 —— 容器内读串口 get_LEVELS
       # 后端补丁：用 repo 当前版覆盖镜像内置旧版（含 gpu_map / 矿卡风扇映射），
       # 避免重建后回退到 09-13 镜像代码；与运行中的 bind-mount 校验一致（md5 相同）。
       - ./backend/app.py:/app/backend/app.py:ro
       - ./backend/host_metrics.py:/app/backend/host_metrics.py:ro
+      # v93 补丁：discovery.py 用 repo 当前版（docker-proxy 兜底发现容器化 vLLM）
+      - ./backend/discovery.py:/app/backend/discovery.py:ro
+      # v93 补丁：gpu_map.py 用 repo 当前版（容器化 vLLM 主进程无 --port 时按
+      # served-model-name/model 兜底归属 GPU）
+      - ./backend/gpu_map.py:/app/backend/gpu_map.py:ro
     environment:
       SENTINEL_PORT: ${SENTINEL_PORT:-8733}
       VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-[{"name":"DeepSeek-V4-Flash","url":"http://127.0.0.1:9003"}]}
       SAMPLE_INTERVAL: ${SAMPLE_INTERVAL:-2}
-      HISTORY_RETENTION_HOURS: ${HISTORY_RETENTION_HOURS:-168}
+      HISTORY_RETENTION_HOURS: ${HISTORY_RETENTION_HOURS:-744}
       DASHBOARD_AUTH_ENABLED: ${DASHBOARD_AUTH_ENABLED:-false}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
@@ -55,7 +70,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vllm-sentinel:1.1.0
+    image: vllm-sentinel:1.1.1
     container_name: vllm-sentinel-bmc
     restart: unless-stopped
     network_mode: none

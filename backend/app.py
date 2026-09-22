@@ -151,7 +151,11 @@ async def health():
 
 
 @app.get("/api/state")
-async def current_state():
+async def current_state(light: bool = Query(False)):
+    # light=1：给 Mac 组件等只需要最新一帧的客户端用，剔除 realtime 历史窗口（占响应 ~79%）
+    if light and isinstance(state, dict) and "realtime" in state:
+        slim = {k: v for k, v in state.items() if k != "realtime"}
+        return slim
     return state
 
 
@@ -165,6 +169,12 @@ async def history(range: str = Query("1h", pattern="^(15m|1h|6h|24h|7d)$")):
 _ENERGY_PRICE_FLAT = 0.736945    # 平段/非分时 元/度
 _ENERGY_PRICE_PEAK = 1.133475    # 高峰 元/度
 _ENERGY_PRICE_VALLEY = 0.457041  # 低谷 元/度
+
+
+def _calendar_month_end_day(now) -> int:
+    """自然月最后一天（10月31天→31、2月平年28/闰年29）。"""
+    import calendar as _cal
+    return _cal.monthrange(now.year, now.month)[1]
 
 
 def _tou_price_utc(ts: float) -> float:
@@ -222,11 +232,26 @@ def _cumulative_energy() -> dict[str, Any]:
                 if prev[0] >= year_start:
                     cost_year += money
         prev = (ts, power)
+    # v1.1.2: days 改为自然月内有数据的天数（从本月 1 号起算，含今天）——
+    # 原来是样本跨度（retention 7 天时恒为 7），与"本月电费"的自然月口径不一致
     days = 0
     if rows:
-        days = max(1, round((rows[-1][0] - rows[0][0]) / 86400.0))
+        days = max(1, (now - _dt.fromtimestamp(month_start)).days + 1) if month_start else max(1, round((rows[-1][0] - rows[0][0]) / 86400.0))
+    # v1.1.3: 本月预估电费——9/1-9/14 等无样本时段无法回溯（旧 retention 已删），
+    # 用线性外推：cost_month_est = cost_month + 平均速率 × 本月剩余小时数。
+    # 平均速率 = cost_month / 本月内样本覆盖跨度（含关机空洞——关机不耗电，跨度分母正确），
+    # 隐含"未来开关机比例与覆盖期相同"；月初无样本时段不计入预估（诚实口径，不高估）。
+    cost_month_est = cost_month
+    if month_start and cost_month > 0:
+        covered_from = max(month_start, rows[0][0])
+        covered_hours = (now.timestamp() - covered_from) / 3600.0
+        remaining_hours = max(0.0, (_dt(now.year, now.month, _calendar_month_end_day(now)).timestamp() + 86399 - now.timestamp()) / 3600.0)
+        # 覆盖不足 6h 时线性外推误差过大（月初刚起步），不出预估（est=cost）
+        if covered_hours >= 6.0:
+            cost_month_est = cost_month + (cost_month / covered_hours) * remaining_hours
     return {"kwh": round(total_kwh, 1), "cost": round(cost, 2), "days": days,
-            "cost_month": round(cost_month, 2), "cost_year": round(cost_year, 2)}
+            "cost_month": round(cost_month, 2), "cost_year": round(cost_year, 2),
+            "cost_month_est": round(cost_month_est, 2)}
 
 
 @app.get("/api/energy")

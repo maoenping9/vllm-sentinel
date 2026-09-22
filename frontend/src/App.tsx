@@ -127,11 +127,20 @@ const MODEL_COLOR_MAP:Record<string,string>={
   'FishSpeech-TTS':'#4ade80','GPT-SoVITS-TTS':'#c084fc','Whisper-ASR':'#2dd4bf','Unlimited-OCR':'#e879f9',
 }
 const FALLBACK_COLORS=['#4e9cff','#34d399','#f59e0b','#a78bfa','#f472b6','#22d3ee']
+const __modelColorAssigned:Record<string,string>={}
 const modelColor=(name:string):string=>{
   if(MODEL_COLOR_MAP[name])return MODEL_COLOR_MAP[name]
+  // v92：新模型颜色防撞——动态分配器（模块级状态持久化，同一模型颜色稳定）；
+  // 新名字出现时从 FALLBACK_COLORS 里挑一个未被当前活跃模型占用的颜色，
+  // 保证新模型与现有模型颜色都不同；活跃模型 >6 色时才循环复用
+  if(__modelColorAssigned[name])return __modelColorAssigned[name]
   let h=0;const s=name||''
   for(let i=0;i<s.length;i++)h=(h+s.charCodeAt(i)*(i+7))%997
-  return FALLBACK_COLORS[h%FALLBACK_COLORS.length]
+  const used=new Set<string>([...Object.values(__modelColorAssigned),...Object.values(MODEL_COLOR_MAP)])
+  const free=FALLBACK_COLORS.filter(c=>!used.has(c))
+  const pick=free.length?free[h%free.length]:FALLBACK_COLORS[h%FALLBACK_COLORS.length]
+  __modelColorAssigned[name]=pick
+  return pick
 }
 const SHORT_NAMES:Record<string,string>={
   'GLM-5.3-Flash':'GLM-5.3','DeepSeek-V4-Flash-Exp':'DSV4-V','Qwen3.8-27B-W4A16':'Qwen3.8',
@@ -197,7 +206,7 @@ function ModelServicePanel({data}:{data:Snapshot}){
   </Panel>
 }
 
-function EnergyPanel({data,energy}:{data:Snapshot;energy:{kwh:number;cost:number;days:number}|null}){
+function EnergyPanel({data,energy}:{data:Snapshot;energy:{kwh:number;cost:number;days:number;cost_month?:number;cost_year?:number;cost_month_est?:number}|null}){
   const tou=touPrice(new Date())
   const totalW=data.gpu.power_w+200
   return <Panel title="实时电费" subtitle={`浙江滨江商业用电（单一制不满1千伏）· ${tou.label}`}>
@@ -205,7 +214,7 @@ function EnergyPanel({data,energy}:{data:Snapshot;energy:{kwh:number;cost:number
       <div><span>当前段位</span><b>{tou.tier}段 {tou.price.toFixed(4)} 元/度</b></div>
       <div><span>实时电费</span><b>{number(totalW/1000*tou.price,2)} 元/时</b></div>
       <div><span>整机功耗</span><b>{number(totalW,1)} W（GPU实时+200W固定）</b></div>
-      <div><span>本月电费 / 本年电费总额</span><b>{energy?`${number(energy.cost,2)} 元 / ${number(energy.cost,2)} 元（${energy.days}天）`:'--'}</b></div>
+      <div><span>本月电费（预估）/ 本年电费总额</span><b>{energy?`${number(energy.cost_month_est ?? energy.cost_month ?? energy.cost,2)} 元 / ${number(energy.cost_year ?? energy.cost,2)} 元（本月${energy.days}天）`:'--'}</b></div>
     </div>
   </Panel>
 }
@@ -223,7 +232,7 @@ function GpuTile({gpu,selected,onClick,rank}:{gpu:GpuItem;selected?:boolean;onCl
   </button>
 }
 
-function Dashboard({data,points,range,setRange,energy}:{data:Snapshot;points:Point[];range:Range;setRange:(r:Range)=>void;energy:{kwh:number;cost:number;days:number}|null}) {
+function Dashboard({data,points,range,setRange,energy}:{data:Snapshot;points:Point[];range:Range;setRange:(r:Range)=>void;energy:{kwh:number;cost:number;days:number;cost_month?:number;cost_year?:number;cost_month_est?:number}|null}) {
   const a=data.vllm.aggregate
   return <>
     <div className="kpiGrid six">
