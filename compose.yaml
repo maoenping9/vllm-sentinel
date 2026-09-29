@@ -5,10 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vllm-sentinel:1.1.1
+    image: vllm-sentinel:1.1.4
     container_name: vllm-sentinel
     restart: unless-stopped
     network_mode: host
+    # pid: host 必填（2026-09-29 定位的显示不对应根因）：
+    # 容器内 nvidia-smi 只能枚举「本 PID 命名空间可见」的进程，缺了 pid: host 时
+    # --query-compute-apps 返回 0 行 → 后端 gpu.items[*].processes 为空 → gpu_map 为空
+    # → gpu.items[*].service 全空 → 组件把所有在用卡标成「空闲」、模型行丢失 GPU 归属。
     pid: host
     gpus: all
     read_only: true
@@ -22,24 +26,27 @@ services:
     tmpfs:
       - /tmp:size=64m,mode=1777
     devices:
-      # v97: 风暴盒(BOSS Storm3, CH341 串口) —— 读 get_LEVELS 换算 GPU3/4/6 RPM
+      # v97: 风暴盒(BOSS Storm3, CH341 串口) —— 读 get_LEVELS 换算 GPU 专职 9733 与机箱扇 RPM
+      # 2026-09-29：机器上有两只风暴盒，且两个 ttyUSB 的枚举顺序会变——
+      #   ① GPU 9733 盒：gpu-fan-control 用 /dev/ttyCH341USB0（沁园 ch341 驱动节点）驱动，
+      #      gpu-mapping.conf 里的 STORM:5/6/7/8（= GPU3/4/5/10 的 9733）都在它上面；
+      #   ② 昆仑4 CPU/GPU 风机盒：gpu-fan-control 的 STORM2_PORT=/dev/ttyUSB0。
+      # 只挂 ttyUSB0 时 sentinel 读的是②，GPU3 的 ch5 读成 0 → 组件里显示 0 转速。
+      # 两个都挂进来，由后端按 /host/dev/ttyCH341USB0 的当前指向动态挑（见 host_metrics.py）。
       - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
     device_cgroup_rules:
       # 本机 cgroup v2 下 --device 未写入 eBPF 设备过滤，需显式放行串口字符设备(188)
       - "c 188:* rwm"
     volumes:
       - /:/host:ro,rslave
       - sentinel-data:/data
-      # v97: 风暴盒(BOSS Storm3, CH341 串口) RPM 换算 —— 容器内读串口 get_LEVELS
-      # 后端补丁：用 repo 当前版覆盖镜像内置旧版（含 gpu_map / 矿卡风扇映射），
-      # 避免重建后回退到 09-13 镜像代码；与运行中的 bind-mount 校验一致（md5 相同）。
-      - ./backend/app.py:/app/backend/app.py:ro
-      - ./backend/host_metrics.py:/app/backend/host_metrics.py:ro
-      # v93 补丁：discovery.py 用 repo 当前版（docker-proxy 兜底发现容器化 vLLM）
-      - ./backend/discovery.py:/app/backend/discovery.py:ro
-      # v93 补丁：gpu_map.py 用 repo 当前版（容器化 vLLM 主进程无 --port 时按
-      # served-model-name/model 兜底归属 GPU）
-      - ./backend/gpu_map.py:/app/backend/gpu_map.py:ro
+      # 后端补丁：整个 backend/ 用 repo 当前版覆盖镜像内置代码（含 gpu_map / 矿卡风扇映射 /
+      # 累计口径），避免重建后回退到旧镜像代码。
+      # 2026-09-29：原来只逐个挂 app.py / host_metrics.py / discovery.py / gpu_map.py 四个文件，
+      # 这次新增 settings.py、database.py 的改动没被挂进去 → 容器 import 失败崩溃启动循环。
+      # 改为整目录挂载，新增文件自动生效，不再有"漏挂"这类坑。
+      - ./backend:/app/backend:ro
     environment:
       SENTINEL_PORT: ${SENTINEL_PORT:-8733}
       VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-[{"name":"DeepSeek-V4-Flash","url":"http://127.0.0.1:9003"}]}
@@ -70,7 +77,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vllm-sentinel:1.1.1
+    image: vllm-sentinel:1.1.4
     container_name: vllm-sentinel-bmc
     restart: unless-stopped
     network_mode: none

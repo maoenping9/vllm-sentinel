@@ -113,11 +113,21 @@ function fleetSummary(items:GpuItem[]):string {
 // ===== 桌面组件同款：模型归一 + 固定唯一配色 + 分时电费（与 Mac Übersicht 组件一致） =====
 const CANON_MODEL=(raw:string):string=>{
   const r=raw||''
+  // 2026-09-29 与桌面组件 v96.8/v96.9 对齐：
+  // ① Qwen3.8 家族按体量区分（INT8 全量 / Flash-Next 精简 / 其余 W4A16）——旧规则把所有
+  //    qwen3.8 一律归成 Qwen3.8-27B-W4A16，导致三卡的 Flash-Next 在页面上被叫成 "Qwen3.8"；
+  // ② DeepSeek V4.1 用裸名上报，旧规则只认 DSV4* → 落到兜底 → 标签被截成 "DeepSeek"。
+  // 精确匹配必须排在通用前缀之前（对象/正则顺序即优先级）。
+  if(/^qwen3\.8-27b-int8/i.test(r))return'Qwen3.8-27B-INT8'
+  if(/^qwen3\.8-flash[\s_-]?next/i.test(r))return'Qwen3.8-Flash-Next'
   if(/^(qwen3\.8)/i.test(r))return'Qwen3.8-27B-W4A16'
+  if(/^DeepSeek[-_ ]?V4\.1/i.test(r))return'DeepSeek-V4.1-Flash'
   if(/^DSV4/i.test(r))return'DeepSeek-V4-Flash-Exp'
+  if(/^DeepSeek[-_ ]?V4/i.test(r))return'DeepSeek-V4-Flash-Exp'
   if(/^GLM/i.test(r))return'GLM-5.3-Flash'
   if(/^WeMM/i.test(r))return'WeMM-Embedding-9B'
   if(/^MiniMax/i.test(r))return'MiniMax-H3'
+  if(/^Unlimited[-_ ]?OCR/i.test(r))return'Unlimited-OCR'
   return r
 }
 const MODEL_COLOR_MAP:Record<string,string>={
@@ -125,6 +135,8 @@ const MODEL_COLOR_MAP:Record<string,string>={
   'WeMM-Embedding-9B':'#a78bfa','Meeting-ASR':'#f472b6','MiniMax-H3':'#22d3ee',
   'WeMM-Embedding-9B-CPU':'#facc15','Qwen3-Embedding-0.6B':'#60a5fa','CosyVoice-TTS':'#fb923c',
   'FishSpeech-TTS':'#4ade80','GPT-SoVITS-TTS':'#c084fc','Whisper-ASR':'#2dd4bf','Unlimited-OCR':'#e879f9',
+  // 与组件同色（组件这几个名字走哈希回退，实测结果固定为下列值；写死避免两端口径漂移）
+  'DeepSeek-V4.1-Flash':'#4e9cff','Qwen3.8-Flash-Next':'#f59e0b','Qwen3.8-27B-INT8':'#a78bfa',
 }
 const FALLBACK_COLORS=['#4e9cff','#34d399','#f59e0b','#a78bfa','#f472b6','#22d3ee']
 const __modelColorAssigned:Record<string,string>={}
@@ -144,6 +156,8 @@ const modelColor=(name:string):string=>{
 }
 const SHORT_NAMES:Record<string,string>={
   'GLM-5.3-Flash':'GLM-5.3','DeepSeek-V4-Flash-Exp':'DSV4-V','Qwen3.8-27B-W4A16':'Qwen3.8',
+  // 与组件 v96.8/v96.9 短名对齐（GPU 瓦片标签用；不补这几条会被 slice 截成 "DeepSeek"/"Qwen3.8-"）
+  'DeepSeek-V4.1-Flash':'DSV4.1','Qwen3.8-Flash-Next':'Qwen3.8-Next','Qwen3.8-27B-INT8':'Qwen3.8-INT8',
   'WeMM-Embedding-9B':'EB-9B','Meeting-ASR':'Meet-ASR','WeMM-Embedding-9B-CPU':'EB-CPU',
   'Qwen3-Embedding-0.6B':'Emb-0.6B','CosyVoice-TTS':'CosyTTS','FishSpeech-TTS':'FishTTS',
   'GPT-SoVITS-TTS':'SoVITS','Whisper-ASR':'Whisper','Unlimited-OCR':'OCR',
