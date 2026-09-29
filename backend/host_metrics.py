@@ -36,10 +36,16 @@ def _num(value: str | None, fallback: float = 0.0) -> float:
 
 
 class HostCollector:
+    # v1.1.4：WAN 口径（只统计出口网卡）。NET_IFACE 可强制指定，留空则按默认路由自动识别。
+    _NET_IFACE_ENV = os.environ.get("NET_IFACE", "").strip()
+    _NET_IFACE_TTL = 60.0
+
     def __init__(self) -> None:
         self.previous_cpu: list[tuple[int, int]] | None = None
         self.previous_io: tuple[float, float, float] | None = None
         self.previous_net: tuple[float, float, float] | None = None
+        self._net_iface: str | None = None
+        self._net_iface_ts: float = 0.0
         self.cpu_model, self.cores, self.threads = self._cpu_identity()
 
     def _cpu_identity(self) -> tuple[str, int, int]:
@@ -123,15 +129,56 @@ class HostCollector:
         self.previous_io = current
         return rates
 
+    def _wan_iface(self) -> str:
+        """WAN 出口网卡名：默认路由所在接口（可用 env NET_IFACE 强制指定）。60s 缓存。"""
+        if self._NET_IFACE_ENV:
+            return self._NET_IFACE_ENV
+        if self._net_iface is not None and time.monotonic() - self._net_iface_ts < self._NET_IFACE_TTL:
+            return self._net_iface
+        name = ""
+        try:
+            for line in (PROC / "net" / "route").read_text(errors="replace").splitlines()[1:]:
+                parts = line.split()
+                if len(parts) >= 8 and parts[1] == "00000000":      # Destination=0.0.0.0 → 默认路由
+                    name = parts[0]
+                    break
+        except OSError:
+            name = ""
+        self._net_iface = name
+        self._net_iface_ts = time.monotonic()
+        return name
+
     def _network(self, now: float) -> tuple[float, float]:
+        """只统计 **WAN 出口网卡** 的流量（ISP 配额口径）。
+
+        2026-09-29：原实现把 /proc/net/dev 里除 lo 外的所有接口相加——本机 10G 内网互传、
+        VPN(tun0) 与 docker 网桥全被算进"网络流量"，9/28 单日虚增 ~2.9TB（其实是机间互传，
+        不进 ISP 配额；用户实测周期值 0.41TB 只有 WAN 口对得上）。
+        取不到默认路由时退回「除 lo 与虚拟接口外全部相加」，避免直接变成 0。
+        """
+        wan = self._wan_iface()
         rx = tx = 0.0
+        matched = False
         for line in _text(PROC / "net/dev").splitlines()[2:]:
             name, _, values = line.partition(":")
-            if name.strip() == "lo":
+            name = name.strip()
+            if name == "lo":
                 continue
             parts = values.split()
-            if len(parts) >= 9:
-                rx += _num(parts[0]); tx += _num(parts[8])
+            if len(parts) < 9:
+                continue
+            if wan:
+                if name != wan:
+                    continue
+            elif name.startswith(("veth", "br-", "docker", "virbr", "tap", "tun")):
+                continue        # 兜底：排除虚拟接口
+            rx += _num(parts[0])
+            tx += _num(parts[8])
+            matched = True
+        if wan and not matched:
+            # 网卡名对不上（改过名/路由变化）→ 本轮沿用上一次读数，不把 0 当真值写进累计
+            if self.previous_net:
+                return 0.0, 0.0
         current = (now, rx, tx)
         if not self.previous_net:
             self.previous_net = current
@@ -169,7 +216,8 @@ class HostCollector:
             "cpu": {"model": self.cpu_model, "cores": self.cores, "threads": self.threads, "usage": cpu_usage, "per_core": per_core, "frequency_mhz": self._frequency(), "load": load},
             "memory": memory,
             "disk": {"total": disk_total, "used": max(0, disk_total - disk_free), "percent": round((disk_total-disk_free)/disk_total*100, 1) if disk_total else 0, "read_bps": read_bps, "write_bps": write_bps},
-            "network": {"rx_bps": rx_bps, "tx_bps": tx_bps},
+            # v1.1.4：附上实际统计的网卡名（WAN 口径，便于核对 ISP 配额；不再是所有网卡相加）
+            "network": {"rx_bps": rx_bps, "tx_bps": tx_bps, "iface": self._wan_iface() or "(全部非虚拟网卡)"},
         }
 
 
@@ -261,24 +309,70 @@ class GpuCollector:
     # 满速按与 Corsair 一致的 3450 RPM 线性换算（用户确认：满速同 3450）：
     #   RPM = level/127 × FAN_MAX_RPM。串口与 gpu-fan-control(--storm) 共用，只读不写，
     #   并加 30s 缓存（SAMPLE_INTERVAL=2Hz 下最多 1/30s 打一次串口），失败静默保持 0。
-    _STORM_PORT = os.environ.get("STORM_PORT", "/dev/ttyUSB0")
+    # 2026-09-29 修两处导致"GPU 详情转速不对 / 出现 0 转速"的缺陷：
+    #  ① 读错盒子：机器上有两只 CH340 风暴盒——(a) GPU 9733 盒：gpu-fan-control 用
+    #     /dev/ttyCH341USB0（沁园官方 ch341 驱动节点）驱动它，映射表里的 STORM:5/6/7/8
+    #     全在它上面；(b) 昆仑4 CPU/GPU 风机盒：gpu-fan-control 的 STORM2_PORT=/dev/ttyUSB0。
+    #     两个 ttyUSB 的枚举顺序会变：原来 /dev/ttyUSB0 正好是 GPU 盒，现在成了昆仑4 盒，
+    #     于是 GPU3(bus26→STORM:5) 读成 0、GPU4/5/10 读到别人家的通道。
+    #     改为按「与 gpu-fan-control 同款节点」动态解析（宿主机 /dev 已挂到 /host/dev）。
+    #  ② 帧解析差一位：get_LEVELS 返回 0x4C('L') 包头 + 8 个通道字节（共 9 字节，每字节 = 档位×2）。
+    #     原实现用 data[ch-1] 把包头当成了 ch1 → ch1 恒为 0x4C/2=38（这正是过去 storm g2
+    #     一直显示 1032 RPM 不变的原因），且 ch8 被丢掉。gpu-fan-control 自己的写入回读用的是
+    #     L[ch]（跳过包头），以后者为准。
+    _STORM_PORT_ENV = os.environ.get("STORM_PORT", "")
     _STORM_LEVELS_TTL = 30.0
+    _STORM_PORT_TTL = 60.0
     _storm_levels: dict[int, int] | None = None
     _storm_levels_ts: float = 0.0
+    _storm_port: str | None = None
+    _storm_port_ts: float = 0.0
 
-    def _storm_levels_read(self) -> dict[int, int]:
-        """读风暴盒 get_LEVELS，返回 {ch: level(0-127)}；串口不可用/失败返回 {}。"""
-        if (self._storm_levels is not None
-                and time.monotonic() - self._storm_levels_ts < self._STORM_LEVELS_TTL):
-            return self._storm_levels
+    def _storm_port_candidates(self) -> list[str]:
+        """候选串口（按优先级）：显式 STORM_PORT（可逗号分隔）→ 跟随官方 ch341 节点当前指向。
+        若两个来源都拿不到（驱动没加载/链接缺失），才退回裸 ttyUSB 节点。
+        —— 关键：只要能确定「官方节点指向谁」，就**不再**退回裸节点，
+        否则一旦枚举顺序翻转，会静默读到另一只盒子（昆仑4 盒）的通道，显示看似正常却完全错的转速。"""
+        cands: list[str] = []
+        if self._STORM_PORT_ENV:
+            cands += [p.strip() for p in self._STORM_PORT_ENV.split(",") if p.strip()]
+        host_dev = Path(HOST_ROOT) / "dev"
+        for link in (host_dev / "ttyCH341USB0", host_dev / "serial" / "by-id" / "usb-1a86_USB_Serial-if00-port0"):
+            try:
+                name = os.path.basename(os.path.realpath(link))
+            except OSError:
+                continue
+            if name.startswith("ttyUSB"):
+                cands.append("/dev/" + name)
+        if not cands:
+            cands = ["/dev/ttyUSB1", "/dev/ttyUSB0"]
+        seen: set[str] = set()
+        return [c for c in cands if not (c in seen or seen.add(c))]
+
+    @staticmethod
+    def _storm_parse_levels(data: bytes) -> dict[int, int]:
+        """帧 → {ch: level}。帧格式：0x4C('L') 包头 + 8 个通道字节（每字节 = 档位×2），共 9 字节；
+        兼容无包头的 8 字节老帧。不足/不合法返回 {}（调用方会换候选口或本轮不出数）。"""
+        if len(data) >= 9 and data[0] == 0x4C:
+            body, base = data, 1
+        elif len(data) >= 8:
+            body, base = data, 0
+        else:
+            return {}
         result: dict[int, int] = {}
-        if fcntl is None or termios is None:
-            return result
-        port = self._STORM_PORT
+        for ch in range(1, 9):
+            if len(body) > base + ch - 1:
+                lvl = body[base + ch - 1] // 2
+                if 0 <= lvl <= 127:
+                    result[ch] = lvl
+        return result
+
+    def _storm_read_port(self, port: str) -> dict[int, int]:
+        """读单个候选串口，返回 {ch: level(0-127)}；打不开/帧不完整/无响应返回 {}。"""
         try:
             fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
         except OSError:
-            return result
+            return {}
         try:
             # 配置 2000000 baud 8N1 raw（无 cfsetispeed 时直接置 cflag 速率位）
             attrs = termios.tcgetattr(fd)
@@ -308,22 +402,38 @@ class GpuCollector:
                         break
             except OSError:
                 pass
-            # get_LEVELS 返回 8 通道字节 + 结束符；每通道字节 = level*2
-            for ch in range(1, 9):
-                if len(data) >= ch:
-                    lvl = data[ch - 1] // 2
-                    if 0 <= lvl <= 127:
-                        result[ch] = lvl
         except OSError:
-            pass
+            return {}
         finally:
             try:
                 os.close(fd)
             except OSError:
                 pass
-        self._storm_levels = result
-        self._storm_levels_ts = time.monotonic()
-        return result
+        # 帧解析见 _storm_parse_levels（包头 + 8 通道，按 gpu-fan-control 的 L[ch] 口径）
+        return self._storm_parse_levels(data)
+
+    def _storm_levels_read(self) -> dict[int, int]:
+        """读风暴盒 get_LEVELS，返回 {ch: level(0-127)}；串口不可用/失败返回 {}。"""
+        if self._storm_levels is not None and time.monotonic() - self._storm_levels_ts < self._STORM_LEVELS_TTL:
+            return self._storm_levels
+        if fcntl is None or termios is None:
+            return {}
+        ports: list[str] = []
+        if self._storm_port and time.monotonic() - self._storm_port_ts < self._STORM_PORT_TTL:
+            ports.append(self._storm_port)          # 先在已知可用口上试
+        ports += [p for p in self._storm_port_candidates() if p not in ports]
+        for port in ports:
+            result = self._storm_read_port(port)
+            if result:
+                if port != self._storm_port:
+                    self._storm_port = port
+                self._storm_port_ts = time.monotonic()
+                self._storm_levels = result
+                self._storm_levels_ts = time.monotonic()
+                return result
+        # 全部候选都失败：**不吃 30s 缓存**（否则一次串口抖动会让所有转速显示 0 达 30 秒）
+        self._storm_levels = None
+        return {}
 
     def _storm_chassis_rpm(self) -> dict[str, float]:
         """Storm3 机箱扇档位 → RPM（ch1/ch2=G2 后排双扇、ch3=G1 前排）。

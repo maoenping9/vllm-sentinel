@@ -27,7 +27,7 @@ mkdir -p ~/Library/Application\ Support/Übersicht/widgets
 cp -R vllm-sentinel.widget ~/Library/Application\ Support/Übersicht/widgets/
 ```
 
-3. 如果服务器 IP 不是 `192.168.110.32`，编辑 widget 里的 `index.jsx` 顶部常量：
+3. 如果服务器 IP 不是 `your-server-ip`，编辑 widget 里的 `index.jsx` 顶部常量：
 
 ```jsx
 const SERVER = 'http://你的服务器IP:8889'
@@ -39,7 +39,7 @@ const SERVER = 'http://你的服务器IP:8889'
 
 | 常量 | 默认 | 说明 |
 |---|---|---|
-| `SERVER` | `http://192.168.110.32:8889` | vLLM Sentinel 控制台地址 |
+| `SERVER` | `http://your-server-ip:8889` | vLLM Sentinel 控制台地址 |
 | `REFRESH_MS` | `2000` | 刷新间隔（毫秒） |
 | `GPU_TOP_N` | `4` | 桌面显示几张 GPU 卡 |
 | `OTHER_W` | `200` | 整机功耗估算的"其他"补偿值 |
@@ -63,7 +63,7 @@ const SERVER = 'http://你的服务器IP:8889'
 
 **为何会变**：本机 LLM 服务会重启/上线下线（Qwen 三实例、DSV4 都会来回抖动），所以 `gpu_map` 是**实时**的——谁在跑就显示谁，谁重启中就不在列表。这是"看到真实情况"而不是写死。
 
-**当前机型映射基准**（gx-3955，14 GPU）：
+**当前机型映射基准**（示例机型，14 GPU）：
 | GPU | LLM / 服务 | 端口 |
 |---|---|---|
 | 0 | WeMM-Embedding-9B | 8008 |

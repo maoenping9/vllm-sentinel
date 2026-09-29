@@ -22,7 +22,7 @@ from .database import HistoryStore
 from .gpu_map import resolve as resolve_gpu_map
 from .gpu_map import _scan_small_services
 from .host_metrics import GpuCollector, HostCollector
-from .settings import APP_NAME, AUTH_ENABLED, AUTH_PASSWORD, AUTH_USERNAME, GPU_MEMORY_WARNING, GPU_TEMP_CRITICAL, GPU_TEMP_WARNING, QUEUE_WARNING, SAMPLE_INTERVAL
+from .settings import APP_NAME, AUTH_ENABLED, AUTH_PASSWORD, AUTH_USERNAME, GPU_MEMORY_WARNING, GPU_TEMP_CRITICAL, GPU_TEMP_WARNING, NET_CYCLE_BASE_GB, NET_CYCLE_START_DAY, QUEUE_WARNING, SAMPLE_INTERVAL, TZ_OFFSET_HOURS
 from .vllm_metrics import VllmCollector
 
 
@@ -177,6 +177,90 @@ def _calendar_month_end_day(now) -> int:
     return _cal.monthrange(now.year, now.month)[1]
 
 
+# ===== v1.1.4：本地（北京）时间边界工具 =====
+# 容器 TZ=UTC，旧代码用 datetime.now() 当本地时间 → 月初/年初边界差 8 小时。
+_TZ = TZ_OFFSET_HOURS * 3600
+
+
+def _local_parts(ts: float) -> tuple[int, int, int]:
+    lt = time.gmtime(ts + _TZ)
+    return lt.tm_year, lt.tm_mon, lt.tm_mday
+
+
+def _local_date(ts: float) -> str:
+    """UTC 时间戳 → 本地日期字符串 YYYY-MM-DD（日粒度汇总的键）。"""
+    lt = time.gmtime(ts + _TZ)
+    return f"{lt.tm_year:04d}-{lt.tm_mon:02d}-{lt.tm_mday:02d}"
+
+
+def _ts_of_day(day: str) -> float:
+    """本地日期 YYYY-MM-DD 的 00:00 → UTC 时间戳。"""
+    import calendar as _cal
+    try:
+        tm = time.strptime(day, "%Y-%m-%d")
+    except ValueError:
+        return 0.0
+    return _cal.timegm(tm) - _TZ
+
+
+def _next_month_first(year: int, month: int) -> str:
+    return f"{year + 1:04d}-01-01" if month == 12 else f"{year:04d}-{month + 1:02d}-01"
+
+
+def _cycle_start_date(year: int, month: int, day: int) -> str:
+    """流量周期起点（本地）：当日 >= NET_CYCLE_START_DAY → 本月该日；否则上月该日。"""
+    if day >= NET_CYCLE_START_DAY:
+        return f"{year:04d}-{month:02d}-{NET_CYCLE_START_DAY:02d}"
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    return f"{prev_year:04d}-{prev_month:02d}-{NET_CYCLE_START_DAY:02d}"
+
+
+_NET_SEED_KEY = "net_cycle_seed"
+
+
+def _net_cycle_seed() -> dict[str, Any]:
+    """本周期流量手工基准（GB）：只在首次运行时写一次 meta，之后长期有效；
+    周期滚动（下个 20 日）后因 cycle_start 不匹配而自动失效，不参与累计。"""
+    raw = history_store.meta_get(_NET_SEED_KEY)
+    if raw:
+        try:
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                return data
+        except (TypeError, ValueError):
+            pass
+    seed = {"cycle_start": "", "bytes": 0.0}
+    if NET_CYCLE_BASE_GB > 0:
+        seed = {
+            "cycle_start": _cycle_start_date(*_local_parts(time.time())),
+            "bytes": NET_CYCLE_BASE_GB * 1_000_000_000.0,
+            "seeded_at": time.time(),
+        }
+        try:
+            history_store.meta_set(_NET_SEED_KEY, json.dumps(seed))
+        except Exception:
+            pass
+    return seed
+
+
+def _integrate_day(prev_ts: float, prev: dict[str, Any], ts: float, cur: dict[str, Any], acc: dict[str, dict[str, float]]) -> None:
+    """把相邻两个采样点之间的一段，累加到「前一点所在本地日」的汇总里。
+
+    - 电量/电费：power(瓦) × dt，电价按 prev_ts 的分时档（与 _tou_price_utc 同口径）
+    - 流量：采样点 net 是 rx+tx 的 MB/s（见 _point），换算成字节累加
+    - dt > 60s 视为关机/采集空洞，整段不计（关机不耗电，也不该按满功率补）
+    """
+    dt = ts - prev_ts
+    if not (0.0 < dt < 60.0):
+        return
+    day = _local_date(prev_ts)
+    slot = acc.setdefault(day, {"kwh": 0.0, "cost": 0.0, "net_bytes": 0.0})
+    kwh = float(prev.get("power") or 0.0) / 1000.0 * (dt / 3600.0)
+    slot["kwh"] += kwh
+    slot["cost"] += kwh * _tou_price_utc(prev_ts)
+    slot["net_bytes"] += float(prev.get("net") or 0.0) * 1_000_000.0 * dt
+
+
 def _tou_price_utc(ts: float) -> float:
     """按北京时间时段取电价（samples.ts 为 UTC）。"""
     lt = time.gmtime(ts + 8 * 3600)
@@ -193,65 +277,77 @@ def _tou_price_utc(ts: float) -> float:
 
 
 def _cumulative_energy() -> dict[str, Any]:
-    """从全部历史样本积分：累计电量(kWh) + 按时段电价折算的累计电费(元)。
-    v1.1.1: 额外计算本月/本年累计电费（预算进度条用，后台自动按自然月/年切分）。"""
-    import json as _json
-    import sqlite3 as _sqlite3
-    from datetime import datetime as _dt
+    """累计电量/电费 + 流量累计。**全部基于 daily 汇总表（永不被 retention 裁剪）**。
+
+    2026-09-29 重写（用户："查看本月额度是否按自然月加总上去了，本年额度也要实时加总，
+    不要只有7天加上"）：旧实现每次请求全表扫 samples 并只统计 retention（31 天）内的样本，
+    于是「本年额度」实际只等于最近一个月；且边界用 UTC（容器 TZ=UTC），月初/年初会错 8 小时。
+    现在：增量把新样本汇入 daily（本地日粒度、与分时电价同口径），月/年/流量周期都从 daily 求和，
+    历史天不再因裁剪丢失；日/月/年边界一律按北京时间。
+    """
     try:
-        conn = _sqlite3.connect(history_store.path, timeout=8)
-        rows = conn.execute("SELECT ts, payload FROM samples ORDER BY ts").fetchall()
-        conn.close()
+        history_store.rollup_into(_integrate_day)
     except Exception:
-        return {"kwh": 0.0, "cost": 0.0, "days": 0, "cost_month": 0.0, "cost_year": 0.0}
-    now = _dt.now()
-    try:
-        month_start = _dt(now.year, now.month, 1).timestamp()
-        year_start = _dt(now.year, 1, 1).timestamp()
-    except Exception:
-        month_start = year_start = 0.0
+        pass
+    rows = history_store.daily_all()
+    now = time.time()
+    year, month, day = _local_parts(now)
+    month_prefix = f"{year:04d}-{month:02d}-"
+    year_prefix = f"{year:04d}-"
+    cycle_start = _cycle_start_date(year, month, day)
+    today = _local_date(now)
+
     total_kwh = 0.0
     cost = 0.0
     cost_month = 0.0
     cost_year = 0.0
-    prev = None
-    for ts, payload in rows:
-        try:
-            power = _json.loads(payload).get("power") or 0.0
-        except Exception:
-            power = 0.0
-        if prev is not None:
-            dt_h = (ts - prev[0]) / 3600.0
-            if 0 < dt_h < 1.0:  # 忽略采集空洞
-                kwh = prev[1] / 1000.0 * dt_h
-                money = kwh * _tou_price_utc(prev[0])
-                total_kwh += kwh
-                cost += money
-                if prev[0] >= month_start:
-                    cost_month += money
-                if prev[0] >= year_start:
-                    cost_year += money
-        prev = (ts, power)
-    # v1.1.2: days 改为自然月内有数据的天数（从本月 1 号起算，含今天）——
-    # 原来是样本跨度（retention 7 天时恒为 7），与"本月电费"的自然月口径不一致
-    days = 0
-    if rows:
-        days = max(1, (now - _dt.fromtimestamp(month_start)).days + 1) if month_start else max(1, round((rows[-1][0] - rows[0][0]) / 86400.0))
-    # v1.1.3: 本月预估电费——9/1-9/14 等无样本时段无法回溯（旧 retention 已删），
-    # 用线性外推：cost_month_est = cost_month + 平均速率 × 本月剩余小时数。
-    # 平均速率 = cost_month / 本月内样本覆盖跨度（含关机空洞——关机不耗电，跨度分母正确），
-    # 隐含"未来开关机比例与覆盖期相同"；月初无样本时段不计入预估（诚实口径，不高估）。
+    kwh_month = 0.0
+    kwh_year = 0.0
+    net_month = 0.0
+    net_year = 0.0
+    net_cycle = 0.0
+    month_days: list[str] = []
+    for row in rows:
+        d = row["day"]
+        total_kwh += row["kwh"]
+        cost += row["cost"]
+        in_year = d.startswith(year_prefix)
+        in_month = d.startswith(month_prefix)
+        if in_year:
+            cost_year += row["cost"]
+            kwh_year += row["kwh"]
+            net_year += row["net_bytes"]
+        if in_month:
+            cost_month += row["cost"]
+            kwh_month += row["kwh"]
+            net_month += row["net_bytes"]
+            month_days.append(d)
+        if cycle_start <= d <= today:
+            net_cycle += row["net_bytes"]
+    seed = _net_cycle_seed()
+    if seed.get("cycle_start") == cycle_start:
+        net_cycle += float(seed.get("bytes") or 0.0)   # 本周期手工基准（跨周期自动失效）
+    # days：本月已过天数（自然月口径，显示/预估用）
+    days = day
+    # 本月预估：用本月日均速率外推到月底（覆盖不足 6h 不出预估，防月初外推爆炸）
     cost_month_est = cost_month
-    if month_start and cost_month > 0:
-        covered_from = max(month_start, rows[0][0])
-        covered_hours = (now.timestamp() - covered_from) / 3600.0
-        remaining_hours = max(0.0, (_dt(now.year, now.month, _calendar_month_end_day(now)).timestamp() + 86399 - now.timestamp()) / 3600.0)
-        # 覆盖不足 6h 时线性外推误差过大（月初刚起步），不出预估（est=cost）
+    if month_days and cost_month > 0:
+        covered_from = max(_ts_of_day(month_days[0]), _ts_of_day(f"{year:04d}-{month:02d}-01"))
+        covered_hours = (now - covered_from) / 3600.0
+        remaining_hours = max(0.0, (_ts_of_day(_next_month_first(year, month)) - now) / 3600.0)
         if covered_hours >= 6.0:
             cost_month_est = cost_month + (cost_month / covered_hours) * remaining_hours
-    return {"kwh": round(total_kwh, 1), "cost": round(cost, 2), "days": days,
-            "cost_month": round(cost_month, 2), "cost_year": round(cost_year, 2),
-            "cost_month_est": round(cost_month_est, 2)}
+    return {
+        "kwh": round(total_kwh, 1), "cost": round(cost, 2), "days": days,
+        "cost_month": round(cost_month, 2), "cost_year": round(cost_year, 2),
+        "cost_month_est": round(cost_month_est, 2),
+        "kwh_month": round(kwh_month, 1), "kwh_year": round(kwh_year, 1),
+        # 流量累计（字节）：周期(20日起)/本月/本年，来自 daily + 本周期基准
+        "net_cycle_bytes": round(net_cycle, 0), "net_month_bytes": round(net_month, 0),
+        "net_year_bytes": round(net_year, 0), "net_cycle_start": cycle_start,
+        "net_cycle_base_bytes": round(float(seed.get("bytes") or 0.0), 0) if seed.get("cycle_start") == cycle_start else 0.0,
+        "days_with_data": len(rows),
+    }
 
 
 @app.get("/api/energy")

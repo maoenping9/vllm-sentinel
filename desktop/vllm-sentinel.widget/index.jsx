@@ -1,5 +1,6 @@
 //
 // vLLM Sentinel — macOS 桌面小组件 (Übersicht)
+// 组件版本 v97.2 · 随 vLLM Sentinel v2.2 发布（2026-09-29）
 // 直接渲染在桌面上：壁纸之上、窗口之下，2 秒实时刷新。
 //
 // 数据源：vLLM Sentinel 控制台 /api/state
@@ -9,6 +10,9 @@
 // 字符串拼接，导致多实例 Qwen 出现 24000t/s/2333% 的错误值）。
 //
 // 更新记录：
+//   - v97.2（随 v2.2 发布）：流量累计改读后端持久累加值（不再跳动）；本月/本年额度条改用真实自然月/年累计；
+//     CPU 区新增内存使用率条 + 内存条温度 0/1 + 内存供电温度 0/1；GPU 转速读数修复（多串口盒选口 + 帧解析）；
+//     DeepSeek V4.1 / Qwen3.8 家族命名对齐；卡堆间距按卡数自适应
 //   - GPU 全量显示：14 张卡全部列出（不再截断 Top-N），按 负载×0.7+温度×0.3 降序
 //   - 负载条改为 CSS transition 实时动画：宽度平滑渐变 + 温度阈值变色（>=72C 红橙色，否则蓝绿色）
 //   - 新增 CPU 区块：逐核负载条（最多 32 线程）+ 总使用率/频率
@@ -43,11 +47,11 @@
 //   1. 安装 Übersicht:  brew install --cask ubersicht
 //   2. 把整个 vllm-sentinel.widget 文件夹拷到:
 //      ~/Library/Application Support/Übersicht/widgets/
-//   3. 如服务器 IP 不是 192.168.1.100:8889，改下面 SERVER 常量即可。
+//   3. 如服务器 IP 不是 your-server-ip:8889，改下面 SERVER 常量即可。
 //
 
 // ===== 可配置 =====
-const SERVER = "http://192.168.1.100:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
+const SERVER = "http://your-server-ip:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
 const REFRESH_MS = 2000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
 const HOT_TEMP = 75                           // >= 此温度变红（GPU 负载条 + CPU 温度）
 const OTHER_W = 200                            // 整机功耗估算的"其他"补偿值
@@ -83,12 +87,16 @@ function touPrice(date) {
 }
 
 // ===== v96 网络流量周期函数（每月 20 号 → 下月 20 号，跨月周期） =====
-// 返回 { tb: 周期累计 TB, warn: 是否已达 1TB 红色提示, days: 周期已过天数 }
-// tx/rx 为字节/秒瞬时速率，积分还原周期累计（20 号 00:00 起算，含当天）
-function netCycleTraffic(nowMs, net) {
+// 返回 { tb: 周期累计 TB, warn: 是否已达 1TB 红色提示, days: 周期已过天数, baseGb: 计入的手工基准 GB }
+// v97.2（2026-09-29 用户："网络流量显示还是没有实时显示，会跳动，0.41这个数据是对的"）：
+//   ① 周期累计改为读**后端持久累加值**（/api/energy 的 net_cycle_bytes）——后端按 WAN 出口网卡
+//      （默认路由口）累计，LAN 互传/VPN/docker 网桥不计入 ISP 配额，且日汇总表永不被 31 天裁剪，
+//      所以数值单调递增、每 2 秒实时刷新，不再随瞬时速率跳动。
+//   ② 旧实现是「瞬时速率 × 周期已过时长」，同一秒内速率一变数值就跳（且把 10G 内网互传也算进去，
+//      9/28 单日曾虚增 2.9TB）。仅在拿到不到后端字段时（旧后端）才退回旧算法兜底。
+function netCycleTraffic(nowMs, net, energy) {
   const n = nowMs ? new Date(nowMs) : new Date()
   const day = n.getDate()
-  const hoursInDay = n.getHours() + n.getMinutes() / 60
   // 周期起点：day>=20 → 本月 20 号 00:00；day<20 → 上月 20 号 00:00
   let startMs
   if (day >= NET_CYCLE_START_DAY) {
@@ -98,10 +106,17 @@ function netCycleTraffic(nowMs, net) {
     startMs = new Date(pm.getFullYear(), pm.getMonth(), NET_CYCLE_START_DAY).getTime()
   }
   const elapsedHours = Math.max(0, (n.getTime() - startMs) / 3600000)
+  const days = Math.floor(elapsedHours / 24)
+  // ① 首选：后端持久累计（真实、单调、实时）
+  if (energy && typeof energy.net_cycle_bytes === "number") {
+    const tb = energy.net_cycle_bytes / 1e12
+    const baseGb = typeof energy.net_cycle_base_bytes === "number" ? energy.net_cycle_base_bytes / 1e9 : 0
+    return { tb: tb, warn: tb >= NET_WARN_TB, days: days, baseGb: baseGb, source: "api" }
+  }
+  // ② 兜底：旧后端 —— 瞬时速率 × 周期已过时长（会跳动，仅当拿不到后端字段时用）
   const tbIntegral = ((Number(net.tx_bps) || 0) + (Number(net.rx_bps) || 0)) * elapsedHours * 3600 / 1e12
-  // v96.1：max(积分, 手工基准)——手工基准覆盖积分低估（单网卡速率漏全网流量），积分超过后自动切回
   const tb = Math.max(tbIntegral, NET_USED_GB_OVERRIDE / 1000)
-  return { tb: tb, integral: tbIntegral, warn: tb >= NET_WARN_TB, days: Math.floor(elapsedHours / 24) }
+  return { tb: tb, warn: tb >= NET_WARN_TB, days: days, baseGb: NET_USED_GB_OVERRIDE, source: "integral" }
 }
 
 // ===== 数据拉取 =====
@@ -252,6 +267,7 @@ const MODEL_COLORS = ["#4e9cff", "#34d399", "#f59e0b", "#a78bfa", "#f472b6", "#2
 // ===== 每个模型固定唯一配色（模型服务列表与 GPU 行一致：同名同色、不同模型不同色） =====
 const MODEL_COLOR_MAP = {
   "DeepSeek-V4-Flash-Exp": "#4e9cff",
+  "DeepSeek-V4.1-Flash": "#4e9cff",
   "GLM-5.3-Flash": "#34d399",
   "Qwen3.8-27B-W4A16": "#f59e0b",
   "WeMM-Embedding-9B": "#a78bfa",
@@ -283,18 +299,47 @@ const clamp = (v) => Math.max(0, Math.min(100, Number(v) || 0))
 const clamp01 = (v) => Math.max(0, Math.min(100, Number(v) || 0))
 const gpuScore = (g) => gNum(g.utilization, 0) * 0.7 + gNum(g.temperature, 0) * 0.3
 
+// v96.9：BMC 传感器配色档位——优先用传感器自带门槛（upper_warning/upper_critical），
+// 没门槛的（如 CPU0_DTS）回落到组件统一的 HOT_TEMP。内存条要用这个：DIMM 的 BMC 门槛是
+// 85/87°C，若直接套 GPU 用的 75°C，会常年显示红色（当前 82/79°C 实测）。
+const sensorTone = function (sensor) {
+  if (!sensor || sensor.value === null || sensor.value === undefined) return "#e2e8f0"
+  const v = Number(sensor.value)
+  if (!isFinite(v)) return "#e2e8f0"
+  const warn = (sensor.upper_warning === null || sensor.upper_warning === undefined) ? HOT_TEMP : Number(sensor.upper_warning)
+  const crit = (sensor.upper_critical === null || sensor.upper_critical === undefined) ? warn + 10 : Number(sensor.upper_critical)
+  if (v >= crit) return "#ef4444"
+  if (v >= warn) return "#fbbf24"
+  return "#e2e8f0"
+}
+
+// v96.9：一行内并排显示 0/1 两路温度（内存条温度、内存供电温度共用），各自按自己的门槛上色；
+// 取不到的那一路渲染 "--"（BMC 掉线时两路都是 "--"，不会整行空白）
+const pairSpans = function (pair) {
+  return (pair || []).map(function (s2, i2) {
+    return (
+      <span key={"t" + i2} style={{ marginLeft: i2 === 0 ? 0 : 10, color: sensorTone(s2) }}>
+        {i2 + " " + (s2 && s2.value !== null && s2.value !== undefined ? gNum(s2.value, 0) + "°C" : "--")}
+      </span>
+    )
+  })
+}
+
 // ===== 短名映射（GPU 行标签 & 模型服务行用，避免长模型名溢出） =====
 const SHORT_NAMES = {
   "GLM-5.3-Flash": "GLM-5.3",
   "DeepSeek-V4-Flash-Exp": "DSV4-V",
+  "DeepSeek-V4.1-Flash": "DSV4.1",
   "Qwen3.8-27B-W4A16": "Qwen3.8",
   "WeMM-Embedding-9B": "EB-9B",
   "MiniMax-H3": "MiniMax-H3",
+  // v96.8：Qwen3.8 体量区分——INT8 全量 27B 与 Flash-Next 精简是两个不同模型，短名分开标注
+  "Qwen3.8-27B-INT8": "Qwen3.8-INT8",
+  "Qwen3.8-Flash-Next": "Qwen3.8-Next",
   // 探针上报的历史/别名一律归一到规范短名
   "DSV4-Flash-0731": "DSV4-V",
   "DSV4-Flash-Exp": "DSV4-V",
   "DeepSeek-V4-Flash-0731": "DSV4-V",
-  "Qwen3.8-27B-INT8": "Qwen3.8",
   "qwen3.8-27b": "Qwen3.8",
   // 小模型（GPU/CPU 上跑的嵌入/TTS/ASR 等）
   "Meeting-ASR": "Meet-ASR",
@@ -362,6 +407,20 @@ export const render = ({ output }) => {
   const bmcTemps = (data.bmc && data.bmc.temperatures) || []
   const cpuSensor = bmcTemps.find(function (t) { return t.name === "CPU0_TEMP" }) || bmcTemps.find(function (t) { return (t.name || "").indexOf("CPU") === 0 })
   const cpuTemp = cpuSensor ? cpuSensor.value : null
+  // v96.9：内存相关温度——两组，各取 0/1 两路
+  //   ① 内存条温度 DIMMG0_TEMP / DIMMG1_TEMP（技嘉 BMC 命名，对应"内存0/1"）
+  //   ② 内存供电 VR 温度 VR_DIMMG0_TEMP / VR_DIMMG1_TEMP（门槛 115/120，比内存条高得多）
+  // 换板子命名不同时兜底取前两个同前缀传感器；取不到补 null → 渲染成 "--"（BMC 掉线也走这条）。
+  const pickSensorPair = function (names, prefix) {
+    const named = names.map(function (n) {
+      return bmcTemps.find(function (t) { return t.name === n }) || null
+    })
+    if (named[0] || named[1]) return named
+    const fallback = bmcTemps.filter(function (t) { return (t.name || "").indexOf(prefix) === 0 }).slice(0, 2)
+    return [fallback[0] || null, fallback[1] || null]
+  }
+  const dimmSensors = pickSensorPair(["DIMMG0_TEMP", "DIMMG1_TEMP"], "DIMM")
+  const dimmVrSensors = pickSensorPair(["VR_DIMMG0_TEMP", "VR_DIMMG1_TEMP"], "VR_DIMM")
   const perCore = Array.isArray(cpu.per_core) ? cpu.per_core : []
   const mem = (data.host.memory) || {}
   const net = (data.host.network) || {}
@@ -380,8 +439,18 @@ export const render = ({ output }) => {
   // GPU 序号 / 运行模型变化时自动更新；组件只做"服务名 → 规范模型名"归一，不再写死 GPU 清单。
   const canonModel = function (raw) {
     const r = raw || ""
-    if (/^(qwen3\.8)/i.test(r)) return "Qwen3.8-27B-W4A16"
+    // v96.8：Qwen3.8 家族区分体量——INT8(27B 全量 INT8) 与 Flash-Next(精简) 是不同模型，
+    // 不能再都归一成 Qwen3.8-27B-W4A16（否则 GPU 阵列/模型服务把 GPU7 的 INT8 和 3/5/6 的
+    // Flash-Next 混成一个"Qwen3.8"）。精确匹配在通用 qwen3.8 前缀归一派之前。
+    if (/^qwen3\.8-27b-int8/i.test(r)) return "Qwen3.8-27B-INT8"
+    if (/^qwen3\.8-flash[\s_-]?next/i.test(r)) return "Qwen3.8-Flash-Next"
+    if (/^qwen3\.8/i.test(r)) return "Qwen3.8-27B-W4A16"
+    // v96.9：DeepSeek V4.1 用裸名（DeepSeek-V4.1-Flash）上报，不带 DSV4 前缀——
+    // 旧规则只认 DSV4* / DeepSeek-V4-Flash-Exp，导致新名落到兜底分支，
+    // GPU 行只显示 slice(0,7)="DeepSee"、配色也退化成哈希色。V4.1 精确匹配排在前。
+    if (/^DeepSeek[-_ ]?V4\.1/i.test(r)) return "DeepSeek-V4.1-Flash"
     if (/^DSV4/i.test(r)) return "DeepSeek-V4-Flash-Exp"
+    if (/^DeepSeek[-_ ]?V4/i.test(r)) return "DeepSeek-V4-Flash-Exp"
     if (/^GLM/i.test(r)) return "GLM-5.3-Flash"
     if (/^WeMM/i.test(r)) return "WeMM-Embedding-9B"
     if (/^Unlimited[-_ ]?OCR/i.test(r)) return "Unlimited-OCR"
@@ -401,43 +470,63 @@ export const render = ({ output }) => {
     modelGpuMap[g2.index] = { model: canon, online: online }
   })
   // ===== 模型服务：按模型名聚合 vLLM 实例（Qwen 只显示一行，含实例数/GPU/合计 tok·KV） =====
+  // v96.7 修复模型显示重复：gpu_map / small_models 去重只查 byCanon 却从不写入，
+  // 同一模型出现在多个来源（如 gpu_map 与 small_models / 多个 gpu_map 条目归一到同一规范名）时
+  // 会被重复 push 成多行。现在所有来源共享同一个 byCanon，按规范名合并 GPU 列表，每个模型恒一行。
   const modelRows = (() => {
     const byCanon = {}
+    const mergeGpus = function (r, gpus) { (gpus || []).forEach(function (gi) { if (r.gpus.indexOf(gi) < 0) r.gpus.push(gi) }) }
+    // 取规范名对应的聚合行（不存在则新建并写入 byCanon → 天然去重）
+    const getRow = function (canon) {
+      const r = byCanon[canon] || (byCanon[canon] = { name: canon, count: 0, online: 0, tok: 0, kv: 0, kvN: 0, gpus: [], _fromVllm: false, _fromGpu: false, _fromCpu: false })
+      return r
+    }
+    // vLLM 实例（有吞吐/KV 的主模型）
     ;((data.vllm && data.vllm.instances) || []).forEach(function (inst) {
       const raw = inst.models && inst.models[0] ? inst.models[0] : inst.name
       const canon = canonModel(raw)
-      const r = byCanon[canon] || (byCanon[canon] = { name: canon, count: 0, online: 0, tok: 0, kv: 0, kvN: 0, gpus: [] })
+      const r = getRow(canon)
       r.count += 1
+      r._fromVllm = true
       if (inst.online) { r.online += 1; r.tok += Number(inst.generation_tokens_per_second) || 0; r.kv += Number(inst.kv_cache_percent) || 0; r.kvN += 1 }
-      ;(inst.gpus || []).forEach(function (gi) { if (r.gpus.indexOf(gi) < 0) r.gpus.push(gi) })
+      mergeGpus(r, inst.gpus)
     })
-    const rows = Object.keys(byCanon).map(function (canon) {
-      const r = byCanon[canon]
-      r.gpus.sort(function (x, y) { return x - y })
-      return { name: r.name, count: r.count, online: r.online > 0, tok: r.tok, kv: r.kvN ? r.kv / r.kvN : 0, gpus: r.gpus }
-    })
-    // GPU 上跑的非 vLLM 小模型（EB 嵌入等）：从 gpu_map 补充（不在 vllm.instances 里）
+    // GPU 上跑的非 vLLM 小模型（EB 嵌入等）：从 gpu_map 补充；与 vLLM 同规范名 → 合并 GPU 不新增行
     ;((data.gpu_map) || []).forEach(function (gm) {
       const canon = canonModel(gm.service)
-      if (byCanon[canon]) return                       // 已是 vLLM 模型，不重复
-      const gpus = (gm.gpus || []).slice().sort(function (x, y) { return x - y })
-      rows.push({ name: canon, count: 1, online: true, tok: 0, kv: 0, gpus: gpus, _gpuSvc: true })
+      const r = getRow(canon)
+      r.count += 1
+      r._fromGpu = true
+      r.online = Math.max(r.online, 1)
+      mergeGpus(r, gm.gpus)
     })
     // CPU 上跑的小模型（TTS/ASR/embed 等）：从 small_models 补充
     ;((data.small_models) || []).forEach(function (sm) {
       const canon = canonModel(sm.name)
-      if (byCanon[canon]) return
-      rows.push({ name: canon, count: 1, online: true, tok: 0, kv: 0, gpus: [], _cpu: true })
+      const r = getRow(canon)
+      r.count += 1
+      r._fromCpu = true
+      r.online = Math.max(r.online, 1)
     })
-    rows.sort(function (x, y) { return (y.online - x.online) || x.name.localeCompare(y.name) })
-    return rows
+    // 展示类型：CPU 优先；否则仅当非 vLLM（无吞吐数据）才走显存/GPU-svc 行
+    return Object.keys(byCanon).map(function (canon) {
+      const r = byCanon[canon]
+      r.gpus.sort(function (x, y) { return x - y })
+      return {
+        name: r.name, count: r.count, online: r.online > 0,
+        tok: r.tok, kv: r.kvN ? r.kv / r.kvN : 0, gpus: r.gpus,
+        _cpu: !!r._fromCpu,
+        _gpuSvc: !r._fromVllm && !!r._fromGpu,   // 仅 GPU 来源（非 vLLM）才用显存行
+      }
+    }).sort(function (x, y) { return (y.online - x.online) || x.name.localeCompare(y.name) })
   })()
   const modelsOnline = modelRows.filter(function (r) { return r.online }).length
   const modelsTotal = modelRows.length
   const gpuW = Number((data.gpu && data.gpu.power_w) || 0)   // 数字（v21 字符串拼接 bug 同源：num() 返回字符串，"+ OTHER_W" 会拼成 "1669200"）
   const totalW = gpuW + OTHER_W
   // v96 网络流量周期：每月 20 号 → 下月 20 号，1.5TB 配额，达 1TB 红色提示
-  const nc = netCycleTraffic(Date.now(), net)
+  // v97.2：累计值优先取后端持久累加（energy.net_cycle_bytes）
+  const nc = netCycleTraffic(Date.now(), net, energy)
   const stamp = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--"
 
   return (
@@ -451,7 +540,8 @@ export const render = ({ output }) => {
       <div style={styles.section}>模型服务 {modelsOnline}/{modelsTotal} 模型在线</div>
       {modelRows.map((m) => {
         const iColor = modelColor(m.name)
-        const label = SHORT_NAMES[m.name] || m.name.slice(0, 8)
+        // v96.8：模型服务行显示模型全名（GPU 阵列行仍显示短名，见 GPU 区 SHORT_NAMES）
+        const label = m.name || "?"
         const val = m._cpu
           ? "CPU · 进程在跑"
           : m._gpuSvc
@@ -507,6 +597,26 @@ export const render = ({ output }) => {
           <i style={{ ...styles.barFill, width: clamp01(cpu.usage) + "%" }} />
         </span>
       </div>
+      {/* v96.9：CPU 条下面紧跟内存条 + 内存两组温度（内存条 DIMMG0/1、内存供电 VR_DIMM0/1）。
+          原来"主机内存"那一条在额度条之后，这里上移并合并，避免同一数据出现两根条。
+          温度按传感器自带门槛上色（内存条 85/87、供电 115/120）：正常灰/警告黄/危险红 */}
+      <div style={styles.kvRow}>
+        <span style={styles.kvLabel}>内存使用率</span>
+        <span style={styles.kvVal}>{num(mem.percent, 1)}%</span>
+      </div>
+      <div style={styles.barRow}>
+        <span style={styles.barWrap}>
+          <i style={{ ...styles.barFill, width: clamp01(mem.percent) + "%" }} />
+        </span>
+      </div>
+      <div style={styles.kvRow}>
+        <span style={styles.kvLabel}>内存温度</span>
+        <span style={styles.kvVal}>{pairSpans(dimmSensors)}</span>
+      </div>
+      <div style={styles.kvRow}>
+        <span style={styles.kvLabel}>内存供电温度</span>
+        <span style={styles.kvVal}>{pairSpans(dimmVrSensors)}</span>
+      </div>
       <div style={styles.kvRow}>
         <span style={styles.kvLabel}>最高单核</span>
         <span style={styles.kvVal}>{num(Math.max.apply(null, perCore.concat([0])), 1)}%</span>
@@ -524,32 +634,33 @@ export const render = ({ output }) => {
         <span style={styles.kvLabel}>整机功耗（GPU实时+其他固定）</span>
         <span style={styles.kvValGpu}>{num(totalW, 1)} W</span>
       </div>
-      {/* v62：电费预算两条进度条（不体现任何数值，只显示进度条，后台自动计算） */}
+      {/* v62：电费预算两条进度条。v97.2（2026-09-29 用户："本月额度是否按自然月加总上去了，
+          本年额度也要实时加总，不要只有7天加上"）：两条都改用**后端真实累计值**——
+          cost_month = 自然月（本地时区）已累计电费、cost_year = 自然年累计；
+          数据来自永不被 31 天裁剪的 daily 汇总表，故年度值会跨月持续增长，不再是"只有最近一个月"。
+          预估（cost_month_est）仍由后端提供，放在进度条 title 里备查，不再驱动进度。 */}
       <div style={styles.barRow}>
         <span style={styles.kvLabel}>本月额度</span>
-        <span style={styles.barWrap}>
-          <i style={{ ...styles.barFill, width: clamp01(energy && typeof energy.cost_month_est === "number" ? energy.cost_month_est / MONTH_BUDGET * 100 : (energy && typeof energy.cost_month === "number" ? energy.cost_month / MONTH_BUDGET * 100 : 0)) + "%", ...(energy && typeof (energy.cost_month_est || energy.cost_month) === "number" && (energy.cost_month_est || energy.cost_month) > MONTH_BUDGET * 0.9 ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
+        <span style={styles.barWrap} title={energy && typeof energy.cost_month === "number" ? ("本月已累计 " + num(energy.cost_month, 2) + " 元" + (typeof energy.cost_month_est === "number" ? "，按当前速率预估月底 " + num(energy.cost_month_est, 2) + " 元" : "")) : ""}>
+          <i style={{ ...styles.barFill, width: clamp01(energy && typeof energy.cost_month === "number" ? energy.cost_month / MONTH_BUDGET * 100 : 0) + "%", ...(energy && typeof energy.cost_month === "number" && energy.cost_month > MONTH_BUDGET * 0.9 ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
         </span>
       </div>
       <div style={styles.barRow}>
         <span style={styles.kvLabel}>本年额度</span>
-        <span style={styles.barWrap}>
+        <span style={styles.barWrap} title={energy && typeof energy.cost_year === "number" ? ("本年已累计 " + num(energy.cost_year, 2) + " 元（自然年累计，跨月持续）") : ""}>
           <i style={{ ...styles.barFill, width: clamp01(energy && typeof energy.cost_year === "number" ? energy.cost_year / YEAR_BUDGET * 100 : 0) + "%", ...(energy && typeof energy.cost_year === "number" && energy.cost_year > YEAR_BUDGET * 0.9 ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)" } : {}) }} />
         </span>
       </div>
-      <div style={styles.kvRow}>
-        <span style={styles.kvLabel}>主机内存</span>
-        <span style={styles.kvVal}>{num(mem.percent, 1)}%</span>
-      </div>
-      <div style={styles.barRow}>
-        <span style={styles.barWrap}>
-          <i style={{ ...styles.barFill, width: clamp01(mem.percent) + "%" }} />
-        </span>
-      </div>
+      {/* v96.9：原"主机内存"条已上移到 CPU 综合区（CPU 条下面），这里不再重复显示 */}
       {/* v96 网络流量周期（每月 20 号 → 下月 20 号，总配额 1.5TB，达 1TB 红色提示） */}
       <div style={styles.kvRow}>
         <span style={styles.kvLabel}>网络流量（20日起）</span>
-        <span style={{ ...styles.kvVal, ...(nc.warn ? { color: "#ef4444" } : {}) }}>{gNum(nc.tb, 2)} / {NET_TOTAL_TB} TB{nc.tb > nc.integral + 0.001 ? " *" : ""}</span>
+        <span
+          style={{ ...styles.kvVal, ...(nc.warn ? { color: "#ef4444" } : {}) }}
+          title={nc.source === "api"
+            ? ("后端持久累计（WAN 出口 " + ((net && net.iface) || "?") + "），含手工基准 " + num(nc.baseGb, 0) + " GB；周期 " + nc.days + " 天")
+            : "旧后端兜底：瞬时速率 × 周期已过时长（会跳动）"}
+        >{gNum(nc.tb, 2)} / {NET_TOTAL_TB} TB{nc.baseGb > 0 ? " *" : ""}</span>
       </div>
       <div style={styles.barRow}>
         <span style={styles.barWrap}>
@@ -558,7 +669,10 @@ export const render = ({ output }) => {
       </div>
       <div style={styles.kvRow}>
         <span style={styles.kvLabel}>磁盘 IO / 网络</span>
-        <span style={styles.kvVal}>{num(disk.write_bps/1048576, 1)}/{num(_netMbEma !== null && Date.now() - _netMbEmaAt < STALE_GRACE_MS ? _netMbEma : (net && net.tx_bps ? net.tx_bps/1048576 : 0), 1)} MB/s</span>
+        <span
+          style={styles.kvVal}
+          title={(net && net.iface ? "网络速率=WAN 出口 " + net.iface + "（不含内网互传/容器网桥）" : "")}
+        >{num(disk.write_bps/1048576, 1)}/{num(_netMbEma !== null && Date.now() - _netMbEmaAt < STALE_GRACE_MS ? _netMbEma : (net && net.tx_bps ? net.tx_bps/1048576 : 0), 1)} MB/s</span>
       </div>
 
       {/* 3D 双塔机箱旋转图（v26：风扇重映射定稿版；构建期 3D 投影 + 摆动动画） */}
@@ -595,6 +709,14 @@ export const render = ({ output }) => {
         // 用户定稿（2026-09-22）：放大形成 3D 机箱——从右前方看，正面大面+右外壁窄条。
         // v68：SC 0.951→0.85 机箱再缩小点（留边好看）
         const SC = 0.85, CH = 170
+        // v96.9：卡堆间距自适应——卡条 y=15+i×10、高 6，卡数超过 15 时最后一条会越过
+        // 机箱底（16 卡：15+15×10+6=171 > 170，GPU15 卡条/风机出底）。按可用高度反推 pitch：
+        //   15 卡 → (170-8-6-15)/14 = 10.07 → 截到 10（与 v89/v90 定稿完全一致，外观不变）
+        //   16 卡 → 141/15 = 9.4 → 堆底 162，仍留 8px 底隙
+        // 风扇半径按同比例缩放（保持 v88 定稿"扇不互相碰"的间距比）。
+        const STACK_Y0 = 15, STACK_GAP = 8, STACK_H = 6
+        const STACK_PITCH = Math.min(10, (CH - STACK_GAP - STACK_H - STACK_Y0) / Math.max(1, GPU_COUNT - 1))
+        const STACK_FAN_SCALE = STACK_PITCH / 10
         // 投影范围居中（构建期算好）
         const pj = function (x, y, z) { const p = isoProject(x, y, z); return [p[0] * SC + PJ_OX, p[1] * SC + PJ_OY] }
         // 3D 几何：正面 z=55 + 右外壁 x=155（可见）+ 顶面 y=0（可见）+ 后面板 z=-55（v45 新增）
@@ -665,14 +787,14 @@ export const render = ({ output }) => {
         const GPU_FANS13 = Array.from({ length: GPU_COUNT }, function (_, i2) {
           // v90：y=18+i*10 跟随卡条新间距/起点（slab_y+3）；x=130→132（卡条右缘
           // 120→106 后扇离卡条更远更清晰）；z=53（卡条 50 前）；r=4.4（涡轮扇）
-          const y = 18 + i2 * 10
+          const y = STACK_Y0 + 3 + i2 * STACK_PITCH
           const gpc = gpuByIndex[i2] || {}
           const rpm = gNum(gpc.fan_rpm, 0)
           // 停转/失联：i2>=1（9733 专属）在线但无转速=停转；卡失联(驱动异常)也红（免 GPU0 在线 0dB 停转）
           // v79：扇跟随卡条居中 x=130（右缘 120+10）；v79 加 nx/ny/nz（近立面法线）+ wx/wy/wz
           // v88：r=4.6→4.2 sq=0.9→0.85——间距缩小后扇微缩不互相碰（屏幕高 7.14 vs 间距 7.53）
           const stopped = (i2 >= 1 && !gpc._missing && rpm === 0) || !!gpc._missing
-          return { c: pj(132, y, 53), nx: 0, ny: 0, nz: 1, wx: 132, wy: y, wz: 53, r: 4.4, sq: 0.85, rpm: rpm, kind: "gpu", idx: i2, stop: stopped, miss: !!gpc._missing }
+          return { c: pj(132, y, 53), nx: 0, ny: 0, nz: 1, wx: 132, wy: y, wz: 53, r: 4.4 * STACK_FAN_SCALE, sq: 0.85, rpm: rpm, kind: "gpu", idx: i2, stop: stopped, miss: !!gpc._missing }
         })
         const fanKindColor = { "in": "#7ee2a8", "out": "#fbbf24", "sys": "#9fc4ff" }
 
@@ -690,13 +812,13 @@ export const render = ({ output }) => {
         //      起点 y=10→13（用户：显卡条可以离底部更近一点，堆底 162 离机箱底 170 间隙 8）
         // v90：卡条宽 -115..120→-110..106（用户：显卡条再缩短点）+ 间距 11→10
         // （再缩一点）+ 起点 y=13→15——风扇（x=132）与序号（offset 8）明显拉开距离
-        const SLAB_H = 6, SLAB_Z = 50
+        const SLAB_H = STACK_H, SLAB_Z = 50
         const SLAB_L = -110, SLAB_R = 106
         // v96.3 动态化：卡条数跟本机实际显卡数对应（GPU0-GPU_COUNT-1 全量）
         const slabs13 = Array.from({ length: GPU_COUNT }, function (_, i2) {
           const g2 = gpuByIndex[i2] || {}
           const mInfo = modelGpuMap[i2]
-          const y = 15 + i2 * 10
+          const y = STACK_Y0 + i2 * STACK_PITCH
           return {
             idx: i2, y: y,
             tl: pj(SLAB_L, y, SLAB_Z), tr: pj(SLAB_R, y, SLAB_Z),

@@ -3,12 +3,13 @@
 #   - index.jsx.bak-v9-*        永久保存
 #   - 其它 index.jsx.bak-*      只保留最近 3 个（按修改时间），其余删除
 # 用法: ./prune_widget_backups.sh [保留数量，默认 3]
+# Mac 主机：默认取 DEPLOY_HOST，或用 YOUR_MAC_HOST 环境变量覆盖（示例值仅占位）
 set -euo pipefail
 
 KEEP_V9_GLOB="index.jsx.bak-v9-*"
 MOD_GLOB="index.jsx.bak-*"
 KEEP_N="${1:-3}"
-HOST="${DEPLOY_HOST:-10.10.1.13}"
+HOST="${DEPLOY_HOST:-${YOUR_MAC_HOST:-your-mac-host}}"
 
 ssh -o BatchMode=yes -o StrictHostKeyChecking=no "$HOST" bash -s -- "$KEEP_N" <<'REMOTE'
 KEEP_N="$1"

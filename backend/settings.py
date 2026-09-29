@@ -48,3 +48,13 @@ GPU_TEMP_WARNING = float(os.getenv("GPU_TEMP_WARNING", "78"))
 GPU_TEMP_CRITICAL = float(os.getenv("GPU_TEMP_CRITICAL", "86"))
 GPU_MEMORY_WARNING = float(os.getenv("GPU_MEMORY_WARNING", "92"))
 QUEUE_WARNING = float(os.getenv("QUEUE_WARNING", "16"))
+# ===== v1.1.4：累计口径 =====
+# 自然月/自然年/流量周期都按**北京时间**切边界（容器默认 UTC，差 8h 会把月初/年初那 8 小时
+# 算到上一个月/年，见 2026-09-29 修正）；与 _tou_price_utc 的分时电价口径保持一致。
+TZ_OFFSET_HOURS = int(os.getenv("TZ_OFFSET_HOURS", "8"))
+# 流量周期起点：每月该日 00:00（本地）→ 次月同日，与桌面组件「网络流量（20日起）」一致
+NET_CYCLE_START_DAY = min(28, max(1, int(os.getenv("NET_CYCLE_START_DAY", "20"))))
+# 流量累加基线（GB，十进制）：机器上只有本机网卡的采样，看不到路由器/ISP 的全网流量，
+# 所以可以填一个手工实测值做「本周期起点」的基准，之后按本机采样增量实时累加（单调递增）。
+# 默认 0（不加基准，纯本机累计）；只在首次运行时写入一次 meta，之后跨周期自动失效。
+NET_CYCLE_BASE_GB = float(os.getenv("NET_CYCLE_BASE_GB", "0"))
