@@ -120,7 +120,21 @@ function netCycleTraffic(nowMs, net, energy) {
 }
 
 // ===== 数据拉取 =====
-export const command = `curl -s --max-time 10 --retry 1 --retry-delay 1 ${SERVER}/api/state?light=1 2>/dev/null; echo; curl -s --max-time 10 ${SERVER}/api/energy 2>/dev/null`
+// v97.3 断联治理（2026-09-29，用户："Mac 上总是断联"）——
+// 实测：Mac 到服务器**只有 EasyTier 隧道一条路**（p2p lat=56ms / jitter 40ms / 偶发 150ms+，
+// Mac 自身只有 Wi-Fi 192.168.110.x，与服务器不同网段）；后端很快（/api/energy 约 2ms），
+// 但组件每 2s 起两个 curl 进程 = 每周期 2 次 TCP 握手，高抖动下一次重传退避能拖到 8~13s
+// （实测 40 次里 27 次 >1s、最慢 8.3s），而控制台代理 6s 超时会把这种抖动报成 502 →
+// 组件就显示"离线"；再加上旧命令最坏 ~21s 而刷新是 2s，旧命令没结束新命令又起，连接越堆越堵。
+// 现在：
+//   ① 一个 curl 进程拉两个接口（复用一个 TCP 连接，握手减半、进程数减半）
+//   ② 整周期预算 --connect-timeout 3 --max-time 5（封顶在代理超时之下，不再拖长周期）
+//   ③ 去掉 --retry：下一轮 2s 后本来就是重试，重试只会把周期拖长、堆更多连接
+//   ④ 防重入锁：上一轮没结束就跳过本轮（锁超过 1 分钟自动回收，被杀进程不会留下死锁）
+//   ①②③ 之外还有最大的一处：控制台代理原来把查询串丢了（target = sentBase + pathname），
+//   `?light=1` 从未生效 —— Mac 每次拉的是 65.7KB 全量而不是 20KB 精简版；隧道带宽只有几百 kbps，
+//   于是每周期要 ~2s。代理已修（保留查询串 + 支持 gzip：20KB→3.7KB），这里加 --compressed 收压缩体。
+export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; curl -s --compressed --connect-timeout 3 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null`
 export const refreshFrequency = REFRESH_MS
 
 // ===== 样式（深海蓝玻璃，与控制台 midnight 主题一致） =====
@@ -359,7 +373,7 @@ let _lastEnergy = null          // 最后一次成功的 /api/energy 数据
 let _lastEnergyAt = 0
 let _netMbEma = null            // v96.2 MB/s EMA 平滑状态（跨渲染保持，抹平逐秒毛刺）
 let _netMbEmaAt = 0
-const STALE_GRACE_MS = 15000   // 断连宽限：最后一次成功数据的保鲜期
+const STALE_GRACE_MS = 40000   // 断连宽限（v97.3：15s→40s）：隧道抖动下一次坏周期不再闪"离线"，沿用上次成功数据
 
 export const render = ({ output }) => {
   let data = null
