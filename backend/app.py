@@ -23,6 +23,7 @@ from .gpu_map import resolve as resolve_gpu_map
 from .gpu_map import _scan_small_services
 from .host_metrics import GpuCollector, HostCollector
 from .settings import APP_NAME, AUTH_ENABLED, AUTH_PASSWORD, AUTH_USERNAME, GPU_MEMORY_WARNING, GPU_TEMP_CRITICAL, GPU_TEMP_WARNING, NET_CYCLE_BASE_GB, NET_CYCLE_START_DAY, QUEUE_WARNING, SAMPLE_INTERVAL, TZ_OFFSET_HOURS
+from .summary import build_summary
 from .vllm_metrics import VllmCollector
 
 
@@ -353,6 +354,13 @@ def _cumulative_energy() -> dict[str, Any]:
 @app.get("/api/energy")
 async def energy():
     return await asyncio.to_thread(_cumulative_energy)
+
+
+@app.get("/api/summary")
+async def summary():
+    """桌面小组件专用聚合端点：state+energy 一次给全、展示语义服务端算好（见 summary.py）。"""
+    energy_data = await asyncio.to_thread(_cumulative_energy)
+    return build_summary(state, energy_data)
 
 
 @app.get("/api/stream")
