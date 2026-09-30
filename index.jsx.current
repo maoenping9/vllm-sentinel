@@ -10,6 +10,8 @@
 // 字符串拼接，导致多实例 Qwen 出现 24000t/s/2333% 的错误值）。
 //
 // 更新记录：
+//   - v97.4：公网备用链路（EasyTier 掉线时自动切换云上网关，8s 节流控流量，页脚显示当前链路）；
+//     主路取数改 -sf 快速失败 + 失败即缓存备份数据，断联不再整晚空白
 //   - v97.2（随 v2.2 发布）：流量累计改读后端持久累加值（不再跳动）；本月/本年额度条改用真实自然月/年累计；
 //     CPU 区新增内存使用率条 + 内存条温度 0/1 + 内存供电温度 0/1；GPU 转速读数修复（多串口盒选口 + 帧解析）；
 //     DeepSeek V4.1 / Qwen3.8 家族命名对齐；卡堆间距按卡数自适应
@@ -53,6 +55,15 @@
 // ===== 可配置 =====
 const SERVER = "http://your-server-ip:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
 const REFRESH_MS = 2000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
+// v97.4 公网备用链路（2026-09-30）：9/29 深夜 Mac 端 EasyTier 隧道掉线后组件整晚离线——主地址
+// 只有一条 EasyTier 路径，隧道一断就没有退路。现在加一条不依赖 EasyTier 的备用路：直连云上
+// token 网关(:18889)，网关经反向隧道回源控制台。流量设计（用户口径：出去的都是流量，阿里云也一样）：
+//   · 备用路只在主路失败时才走；且自节流到每 BACKUP_MIN_INTERVAL_S 秒真正联网一次，其余周期复用缓存；
+//   · gzip 后 state≈3.6KB + energy≈0.6KB，按 8s 节流量 ≈0.5KB/s ≈ 45MB/天，网关另限流 40 次/分；
+//   · 家里主路走 EasyTier 局域网直连（实测不出公网、不计流量配额），主路活着时备用路零流量。
+const RELAY = "http://relay-server-ip:18889"           // 备用链路 token 网关（云上 ECS 公网地址）
+const RELAY_TOKEN = "RELAY_TOKEN_PLACEHOLDER"          // 与网关端 /opt/widget-relay/token 一致
+const BACKUP_MIN_INTERVAL_S = 8                        // 备用路最小联网间隔（秒），其余周期复用缓存
 const HOT_TEMP = 75                           // >= 此温度变红（GPU 负载条 + CPU 温度）
 const OTHER_W = 200                            // 整机功耗估算的"其他"补偿值
 const PSU = "2600 + 2200 W"                    // 电源额定
@@ -134,7 +145,9 @@ function netCycleTraffic(nowMs, net, energy) {
 //   ①②③ 之外还有最大的一处：控制台代理原来把查询串丢了（target = sentBase + pathname），
 //   `?light=1` 从未生效 —— Mac 每次拉的是 65.7KB 全量而不是 20KB 精简版；隧道带宽只有几百 kbps，
 //   于是每周期要 ~2s。代理已修（保留查询串 + 支持 gzip：20KB→3.7KB），这里加 --compressed 收压缩体。
-export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; curl -s --compressed --connect-timeout 3 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null`
+// v97.4：主路 curl 失败 → 查缓存是否在备用节流窗内（在则直接吐缓存，不联网）→ 否则 curl 备用网关。
+// 输出第一行带 "MODE primary|backup" 标记（render 侧剥离），页脚据此显示当前链路。
+export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; C=/tmp/.vllm-sentinel-widget.cache; M=/tmp/.vllm-sentinel-widget.mode; out=$(curl -sf --compressed --connect-timeout 2 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null); if [ -n "$out" ]; then echo primary >"$M"; printf '%s' "$out" >"$C"; printf 'MODE primary\\n%s' "$out"; exit 0; fi; if [ "$(cat "$M" 2>/dev/null)" = backup ] && [ -s "$C" ] && [ $(( $(date +%s) - $(stat -f %m "$C" 2>/dev/null || echo 0) )) -lt ${BACKUP_MIN_INTERVAL_S} ]; then printf 'MODE backup\\n%s' "$(cat "$C")"; exit 0; fi; out=$(curl -sf --compressed --connect-timeout 3 --max-time 8 -H "X-Widget-Token: ${RELAY_TOKEN}" -w "\\n" "${RELAY}/api/state?light=1" "${RELAY}/api/energy" 2>/dev/null); if [ -n "$out" ]; then echo backup >"$M"; printf '%s' "$out" >"$C"; printf 'MODE backup\\n%s' "$out"; fi`
 export const refreshFrequency = REFRESH_MS
 
 // ===== 样式（深海蓝玻璃，与控制台 midnight 主题一致） =====
@@ -373,12 +386,14 @@ let _lastEnergy = null          // 最后一次成功的 /api/energy 数据
 let _lastEnergyAt = 0
 let _netMbEma = null            // v96.2 MB/s EMA 平滑状态（跨渲染保持，抹平逐秒毛刺）
 let _netMbEmaAt = 0
+let _lastLink = null            // v97.4 最近一次成功取数的链路：primary=EasyTier 直连 / backup=公网备用
 const STALE_GRACE_MS = 40000   // 断连宽限（v97.3：15s→40s）：隧道抖动下一次坏周期不再闪"离线"，沿用上次成功数据
 
 export const render = ({ output }) => {
   let data = null
   let energy = null
   const parts = (output || "").split(/\n(?=\{)/)   // 按行首 { 分割：[0]=/api/state, [1]=/api/energy
+  if (parts[0] && parts[0].indexOf("MODE ") === 0) { _lastLink = parts[0].slice(5).trim() || null; parts.shift() }   // v97.4 链路标记行
   try { data = JSON.parse(parts[0] || "null") } catch (e) { data = null }
   try { energy = JSON.parse(parts[1] || "null") } catch (e) { energy = null }
   if (data && data.host) {
@@ -400,8 +415,8 @@ export const render = ({ output }) => {
           <span style={styles.live}><i style={styles.dotOff} />离线</span>
         </div>
         <div style={{ fontSize: 12, color: "#aab8cc", padding: "8px 0" }}>
-          无法连接 {SERVER}
-          <div style={{ ...styles.kvLabel, marginTop: 4 }}>检查服务器与网络后自动重试（{REFRESH_MS / 1000}s）</div>
+          无法连接主/备用链路
+          <div style={{ ...styles.kvLabel, marginTop: 4 }}>已尝试直连与公网备用路，自动重试中（{REFRESH_MS / 1000}s）</div>
         </div>
       </div>
     )
@@ -476,12 +491,20 @@ export const render = ({ output }) => {
     if (!svc) return
     const canon = canonModel(svc)
     let online = true
+    let starting = false
     const inst = (data.vllm && data.vllm.instances || []).find(function (i2) {
       return i2.name === svc || (i2.models || []).indexOf(svc) >= 0 || (i2.models || []).indexOf(canon) >= 0
     })
-    if (inst) online = inst.online
-    else online = (g2.memory_used_mb || 0) > 1024
-    modelGpuMap[g2.index] = { model: canon, online: online }
+    if (inst) {
+      // v97.4：有 vLLM 实例时，这张卡上的模型状态完全跟随后端的就绪状态
+      // （进程刚起 / 引擎加载中 → starting，卡上不显示"正常"）
+      const st = inst.state || (inst.online ? "online" : "offline")
+      online = st === "online"
+      starting = st === "starting"
+    } else {
+      online = (g2.memory_used_mb || 0) > 1024   // 非 vLLM 的 GPU 小模型：用显存占用当"在跑"的证据
+    }
+    modelGpuMap[g2.index] = { model: canon, online: online, starting: starting }
   })
   // ===== 模型服务：按模型名聚合 vLLM 实例（Qwen 只显示一行，含实例数/GPU/合计 tok·KV） =====
   // v96.7 修复模型显示重复：gpu_map / small_models 去重只查 byCanon 却从不写入，
@@ -492,7 +515,7 @@ export const render = ({ output }) => {
     const mergeGpus = function (r, gpus) { (gpus || []).forEach(function (gi) { if (r.gpus.indexOf(gi) < 0) r.gpus.push(gi) }) }
     // 取规范名对应的聚合行（不存在则新建并写入 byCanon → 天然去重）
     const getRow = function (canon) {
-      const r = byCanon[canon] || (byCanon[canon] = { name: canon, count: 0, online: 0, tok: 0, kv: 0, kvN: 0, gpus: [], _fromVllm: false, _fromGpu: false, _fromCpu: false })
+      const r = byCanon[canon] || (byCanon[canon] = { name: canon, count: 0, online: 0, starting: 0, tok: 0, kv: 0, kvN: 0, gpus: [], _fromVllm: false, _fromGpu: false, _fromCpu: false })
       return r
     }
     // vLLM 实例（有吞吐/KV 的主模型）
@@ -502,7 +525,11 @@ export const render = ({ output }) => {
       const r = getRow(canon)
       r.count += 1
       r._fromVllm = true
-      if (inst.online) { r.online += 1; r.tok += Number(inst.generation_tokens_per_second) || 0; r.kv += Number(inst.kv_cache_percent) || 0; r.kvN += 1 }
+      // v97.4：三态。后端给了 state（online/starting/offline）就用它——"进程起了但引擎没就绪"
+      // 必须是"启动中"，不能算"正常"（否则模型还在加载权重就显示正常）。没有 state 的旧后端回退 online。
+      const st = inst.state || (inst.online ? "online" : "offline")
+      if (st === "online") { r.online += 1; r.tok += Number(inst.generation_tokens_per_second) || 0; r.kv += Number(inst.kv_cache_percent) || 0; r.kvN += 1 }
+      else if (st === "starting") { r.starting += 1 }
       mergeGpus(r, inst.gpus)
     })
     // GPU 上跑的非 vLLM 小模型（EB 嵌入等）：从 gpu_map 补充；与 vLLM 同规范名 → 合并 GPU 不新增行
@@ -511,7 +538,10 @@ export const render = ({ output }) => {
       const r = getRow(canon)
       r.count += 1
       r._fromGpu = true
-      r.online = Math.max(r.online, 1)
+      // v97.4：原来这里直接 r.online = max(...,1)（只要有 GPU 进程就算"正常"），导致 vLLM 实例
+      // 在加载中也会被这条硬编码覆盖成"正常"。改成只记"进程存在"，是否在线由 vLLM 就绪状态决定
+      // （纯小模型没有 vLLM 指标时才以"进程在跑"作为证据）。
+      r.gpuPresent = true
       mergeGpus(r, gm.gpus)
     })
     // CPU 上跑的小模型（TTS/ASR/embed 等）：从 small_models 补充
@@ -520,21 +550,25 @@ export const render = ({ output }) => {
       const r = getRow(canon)
       r.count += 1
       r._fromCpu = true
-      r.online = Math.max(r.online, 1)
+      r.cpuPresent = true      // v97.4：同 gpu_map，只记"进程在跑"，不直接当"正常"
     })
     // 展示类型：CPU 优先；否则仅当非 vLLM（无吞吐数据）才走显存/GPU-svc 行
     return Object.keys(byCanon).map(function (canon) {
       const r = byCanon[canon]
       r.gpus.sort(function (x, y) { return x - y })
+      // v97.4：在线口径——有 vLLM 实例的行，只认 vLLM 就绪状态（避免进程/端口刚起就报正常）；
+      // 没有 vLLM 指标的纯小模型（GPU 服务 / CPU 进程）以"进程在跑"作为证据。
+      const online = r._fromVllm ? r.online > 0 : (r.online > 0 || !!r.gpuPresent || !!r.cpuPresent)
       return {
-        name: r.name, count: r.count, online: r.online > 0,
+        name: r.name, count: r.count, online: online, starting: !online && r.starting > 0,
         tok: r.tok, kv: r.kvN ? r.kv / r.kvN : 0, gpus: r.gpus,
         _cpu: !!r._fromCpu,
         _gpuSvc: !r._fromVllm && !!r._fromGpu,   // 仅 GPU 来源（非 vLLM）才用显存行
       }
-    }).sort(function (x, y) { return (y.online - x.online) || x.name.localeCompare(y.name) })
+    }).sort(function (x, y) { return (Number(y.online) - Number(x.online)) || (Number(y.starting) - Number(x.starting)) || x.name.localeCompare(y.name) })
   })()
   const modelsOnline = modelRows.filter(function (r) { return r.online }).length
+  const modelsStarting = modelRows.filter(function (r) { return r.starting }).length
   const modelsTotal = modelRows.length
   const gpuW = Number((data.gpu && data.gpu.power_w) || 0)   // 数字（v21 字符串拼接 bug 同源：num() 返回字符串，"+ OTHER_W" 会拼成 "1669200"）
   const totalW = gpuW + OTHER_W
@@ -551,7 +585,7 @@ export const render = ({ output }) => {
       </div>
 
       {/* 模型服务（按模型名聚合，每个模型一行：实例数 · GPU 集 · 合计 tok·KV） */}
-      <div style={styles.section}>模型服务 {modelsOnline}/{modelsTotal} 模型在线</div>
+      <div style={styles.section}>模型服务 {modelsOnline}/{modelsTotal} 模型在线{modelsStarting > 0 ? " · " + modelsStarting + " 启动中" : ""}</div>
       {modelRows.map((m) => {
         const iColor = modelColor(m.name)
         // v96.8：模型服务行显示模型全名（GPU 阵列行仍显示短名，见 GPU 区 SHORT_NAMES）
@@ -564,14 +598,14 @@ export const render = ({ output }) => {
                 ;(m.gpus || []).forEach(function (gi) { used += ((data.gpu && data.gpu.items || []).find(function (g2) { return g2.index === gi }) || {}).memory_used_mb || 0 })
                 return "GPU " + (m.gpus.join(",") || "-") + " · " + gNum(used / 1024, 1) + "G 显存"
               })()
-            : (m.online ? ("GPU " + (m.gpus.join(",") || "-") + " · " + gNum(m.tok, 1) + "t/s · K" + gNum(m.kv, 0) + "%") : "--")
+            : (m.online ? ("GPU " + (m.gpus.join(",") || "-") + " · " + gNum(m.tok, 1) + "t/s · K" + gNum(m.kv, 0) + "%") : (m.starting ? "引擎启动中 · 等待就绪…" : "--"))
         return (
         <div style={{ ...styles.inst, flexWrap: "nowrap" }} key={m.name}>
-          <span style={{ ...styles.instName, ...(iColor ? { color: iColor } : {}), opacity: m.online ? 1 : .45, flexShrink: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={m.name}>
+          <span style={{ ...styles.instName, ...(iColor ? { color: iColor } : {}), opacity: m.online ? 1 : (m.starting ? .8 : .45), flexShrink: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={m.name}>
             {label}
           </span>
-          <span style={{ ...styles.instStatus, color: m.online ? "#7ee2a8" : "#ef4444" }}>
-            <i style={m.online ? styles.instDotOn : styles.instDotOff} />{m.online ? "正常" : "离线"}
+          <span style={{ ...styles.instStatus, color: m.online ? "#7ee2a8" : (m.starting ? "#f5b83a" : "#ef4444") }}>
+            <i style={{ ...(m.online ? styles.instDotOn : styles.instDotOff), ...(m.starting ? { background: "#f5b83a", animation: "none" } : {}) }} />{m.online ? "正常" : (m.starting ? "启动中" : "离线")}
           </span>
           <span style={{ ...styles.instVal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 195 }} title={val}>{val}</span>
         </div>
@@ -1220,7 +1254,7 @@ export const render = ({ output }) => {
 
       <div style={styles.foot}>
         <span>更新 {stamp}</span>
-        <span>{REFRESH_MS / 1000}s 刷新</span>
+        <span style={_lastLink === "backup" ? { color: "#fbbf24" } : undefined}>{_lastLink === "backup" ? "备用链路 " + BACKUP_MIN_INTERVAL_S + "s" : REFRESH_MS / 1000 + "s 刷新"}</span>
       </div>
     </div>
   )
