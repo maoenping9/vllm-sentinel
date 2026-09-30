@@ -52,7 +52,7 @@
 
 // ===== 可配置 =====
 const SERVER = "http://your-server-ip:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
-const REFRESH_MS = 2000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
+const REFRESH_MS = 6000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
 const HOT_TEMP = 75                           // >= 此温度变红（GPU 负载条 + CPU 温度）
 const OTHER_W = 200                            // 整机功耗估算的"其他"补偿值
 const PSU = "2600 + 2200 W"                    // 电源额定
@@ -134,7 +134,7 @@ function netCycleTraffic(nowMs, net, energy) {
 //   ①②③ 之外还有最大的一处：控制台代理原来把查询串丢了（target = sentBase + pathname），
 //   `?light=1` 从未生效 —— Mac 每次拉的是 65.7KB 全量而不是 20KB 精简版；隧道带宽只有几百 kbps，
 //   于是每周期要 ~2s。代理已修（保留查询串 + 支持 gzip：20KB→3.7KB），这里加 --compressed 收压缩体。
-export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; curl -s --compressed --connect-timeout 3 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null`
+export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -maxdepth 0 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; curl -s --compressed --connect-timeout 3 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null`
 export const refreshFrequency = REFRESH_MS
 
 // ===== 样式（深海蓝玻璃，与控制台 midnight 主题一致） =====
