@@ -10,8 +10,6 @@
 // 字符串拼接，导致多实例 Qwen 出现 24000t/s/2333% 的错误值）。
 //
 // 更新记录：
-//   - v97.4：公网备用链路（EasyTier 掉线时自动切换云上网关，8s 节流控流量，页脚显示当前链路）；
-//     主路取数改 -sf 快速失败 + 失败即缓存备份数据，断联不再整晚空白
 //   - v97.2（随 v2.2 发布）：流量累计改读后端持久累加值（不再跳动）；本月/本年额度条改用真实自然月/年累计；
 //     CPU 区新增内存使用率条 + 内存条温度 0/1 + 内存供电温度 0/1；GPU 转速读数修复（多串口盒选口 + 帧解析）；
 //     DeepSeek V4.1 / Qwen3.8 家族命名对齐；卡堆间距按卡数自适应
@@ -55,15 +53,6 @@
 // ===== 可配置 =====
 const SERVER = "http://your-server-ip:8889" // vLLM Sentinel 控制台地址（改成你的服务器 IP）
 const REFRESH_MS = 2000                        // 刷新间隔（2026-09-22 流量优化：1000→2000ms，流量减半；摆动 20s 周期 sin 波 2s 步长仍平滑）
-// v97.4 公网备用链路（2026-09-30）：9/29 深夜 Mac 端 EasyTier 隧道掉线后组件整晚离线——主地址
-// 只有一条 EasyTier 路径，隧道一断就没有退路。现在加一条不依赖 EasyTier 的备用路：直连云上
-// token 网关(:18889)，网关经反向隧道回源控制台。流量设计（用户口径：出去的都是流量，阿里云也一样）：
-//   · 备用路只在主路失败时才走；且自节流到每 BACKUP_MIN_INTERVAL_S 秒真正联网一次，其余周期复用缓存；
-//   · gzip 后 state≈3.6KB + energy≈0.6KB，按 8s 节流量 ≈0.5KB/s ≈ 45MB/天，网关另限流 40 次/分；
-//   · 家里主路走 EasyTier 局域网直连（实测不出公网、不计流量配额），主路活着时备用路零流量。
-const RELAY = "http://relay-server-ip:18889"           // 备用链路 token 网关（云上 ECS 公网地址）
-const RELAY_TOKEN = "RELAY_TOKEN_PLACEHOLDER"          // 与网关端 /opt/widget-relay/token 一致
-const BACKUP_MIN_INTERVAL_S = 8                        // 备用路最小联网间隔（秒），其余周期复用缓存
 const HOT_TEMP = 75                           // >= 此温度变红（GPU 负载条 + CPU 温度）
 const OTHER_W = 200                            // 整机功耗估算的"其他"补偿值
 const PSU = "2600 + 2200 W"                    // 电源额定
@@ -145,9 +134,7 @@ function netCycleTraffic(nowMs, net, energy) {
 //   ①②③ 之外还有最大的一处：控制台代理原来把查询串丢了（target = sentBase + pathname），
 //   `?light=1` 从未生效 —— Mac 每次拉的是 65.7KB 全量而不是 20KB 精简版；隧道带宽只有几百 kbps，
 //   于是每周期要 ~2s。代理已修（保留查询串 + 支持 gzip：20KB→3.7KB），这里加 --compressed 收压缩体。
-// v97.4：主路 curl 失败 → 查缓存是否在备用节流窗内（在则直接吐缓存，不联网）→ 否则 curl 备用网关。
-// 输出第一行带 "MODE primary|backup" 标记（render 侧剥离），页脚据此显示当前链路。
-export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; C=/tmp/.vllm-sentinel-widget.cache; M=/tmp/.vllm-sentinel-widget.mode; out=$(curl -sf --compressed --connect-timeout 2 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null); if [ -n "$out" ]; then echo primary >"$M"; printf '%s' "$out" >"$C"; printf 'MODE primary\\n%s' "$out"; exit 0; fi; if [ "$(cat "$M" 2>/dev/null)" = backup ] && [ -s "$C" ] && [ $(( $(date +%s) - $(stat -f %m "$C" 2>/dev/null || echo 0) )) -lt ${BACKUP_MIN_INTERVAL_S} ]; then printf 'MODE backup\\n%s' "$(cat "$C")"; exit 0; fi; out=$(curl -sf --compressed --connect-timeout 3 --max-time 8 -H "X-Widget-Token: ${RELAY_TOKEN}" -w "\\n" "${RELAY}/api/state?light=1" "${RELAY}/api/energy" 2>/dev/null); if [ -n "$out" ]; then echo backup >"$M"; printf '%s' "$out" >"$C"; printf 'MODE backup\\n%s' "$out"; fi`
+export const command = `L=/tmp/.vllm-sentinel-widget.lock; if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +1 2>/dev/null)" ]; then rmdir "$L" 2>/dev/null; fi; mkdir "$L" 2>/dev/null || exit 0; trap 'rmdir "$L" 2>/dev/null' EXIT; curl -s --compressed --connect-timeout 3 --max-time 5 -w "\\n" "${SERVER}/api/state?light=1" "${SERVER}/api/energy" 2>/dev/null`
 export const refreshFrequency = REFRESH_MS
 
 // ===== 样式（深海蓝玻璃，与控制台 midnight 主题一致） =====
@@ -386,14 +373,12 @@ let _lastEnergy = null          // 最后一次成功的 /api/energy 数据
 let _lastEnergyAt = 0
 let _netMbEma = null            // v96.2 MB/s EMA 平滑状态（跨渲染保持，抹平逐秒毛刺）
 let _netMbEmaAt = 0
-let _lastLink = null            // v97.4 最近一次成功取数的链路：primary=EasyTier 直连 / backup=公网备用
 const STALE_GRACE_MS = 40000   // 断连宽限（v97.3：15s→40s）：隧道抖动下一次坏周期不再闪"离线"，沿用上次成功数据
 
 export const render = ({ output }) => {
   let data = null
   let energy = null
   const parts = (output || "").split(/\n(?=\{)/)   // 按行首 { 分割：[0]=/api/state, [1]=/api/energy
-  if (parts[0] && parts[0].indexOf("MODE ") === 0) { _lastLink = parts[0].slice(5).trim() || null; parts.shift() }   // v97.4 链路标记行
   try { data = JSON.parse(parts[0] || "null") } catch (e) { data = null }
   try { energy = JSON.parse(parts[1] || "null") } catch (e) { energy = null }
   if (data && data.host) {
@@ -415,8 +400,8 @@ export const render = ({ output }) => {
           <span style={styles.live}><i style={styles.dotOff} />离线</span>
         </div>
         <div style={{ fontSize: 12, color: "#aab8cc", padding: "8px 0" }}>
-          无法连接主/备用链路
-          <div style={{ ...styles.kvLabel, marginTop: 4 }}>已尝试直连与公网备用路，自动重试中（{REFRESH_MS / 1000}s）</div>
+          无法连接 {SERVER}
+          <div style={{ ...styles.kvLabel, marginTop: 4 }}>检查服务器与网络后自动重试（{REFRESH_MS / 1000}s）</div>
         </div>
       </div>
     )
@@ -1254,7 +1239,7 @@ export const render = ({ output }) => {
 
       <div style={styles.foot}>
         <span>更新 {stamp}</span>
-        <span style={_lastLink === "backup" ? { color: "#fbbf24" } : undefined}>{_lastLink === "backup" ? "备用链路 " + BACKUP_MIN_INTERVAL_S + "s" : REFRESH_MS / 1000 + "s 刷新"}</span>
+        <span>{REFRESH_MS / 1000}s 刷新</span>
       </div>
     </div>
   )
