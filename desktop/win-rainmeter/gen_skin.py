@@ -104,8 +104,6 @@ def main(outdir="."):
         "FontSize=9",
         "FontColor=226,232,240,255",
         "AntiAlias=1",
-        "X=0",
-        "Y=0",
         "",
         "[SecTitle]",
         "FontColor=148,163,184,255",
