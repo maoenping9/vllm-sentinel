@@ -540,6 +540,16 @@ def main(outdir="."):
         line = line.replace("Text=[&wthreads]", "Text=[&wthreads] 线程")
         L3.append(line)
 
+    # Rainmeter 坐标默认相对定位（上一元素位置 + 值），纯数字会全线累加堆叠。
+    # 本皮肤绘制层全部改绝对定位：行首与同行组合的 X=/Y= 纯数值统一补 # 前缀。
+    import re as _re
+    L4 = []
+    for line in L3:
+        line = _re.sub(r"^([XY])=(-?[\d.]+)(?![re])", r"\1=#\2", line)
+        line = _re.sub(r"(?<= )Y=(-?[\d.]+)(?![re])", r"Y=#\1", line)
+        L4.append(line)
+    L3 = L4
+
     path = os.path.join(outdir, "vLLMSentinel.ini")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(L3) + "\n")
