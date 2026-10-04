@@ -25,6 +25,7 @@ MAP = {
     "meters_bar.html": ["meter_bar"],
     "meters_shape.html": ["meter_shape"],
     "measures_general-options.html": ["measure_general"],
+    "ifconditions.html": ["measure_general"],
     "measures_string.html": ["measure_string"],
     "measures_calc.html": ["measure_calc"],
     "registry.html": ["measure_registry"],

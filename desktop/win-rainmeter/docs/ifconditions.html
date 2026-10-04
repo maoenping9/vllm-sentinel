@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Meta tags for proper character encoding and social media handling  -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.9, maximum-scale=0.9">
+	<meta itemprop="name" content="IfConditions - Rainmeter Docs">
+	<meta property="og:title" content="IfConditions - Rainmeter Docs">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://www.rainmeter.net">
+	<meta property="og:image" content="https://www.rainmeter.net/img/media_image.png">
+	<meta property="og:site_name" content="Rainmeter">
+	<meta property="og:locale" content="en_US" />
+
+	<!-- Page title  -->
+	<title>IfConditions - Rainmeter Documentation</title>
+
+	<script>
+		(function() {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('theme');
+			} catch (e) {
+			}
+			if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				theme = 'dark';
+			}
+			if (theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				document.documentElement.style.colorScheme = theme;
+			}
+		})();
+	</script>
+
+	<!-- Files need to be local for offline version of documentations -->
+	<link rel="stylesheet" href="/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/css/rainmeter.css?v=24f3b22e">
+	<link rel="stylesheet" href="/css/jquery.fancybox.min.css">
+	<link rel="stylesheet" href="/css/fontawesome.css">
+	<link rel="stylesheet" href="/css/solid.css">
+
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600">
+	<link href="https://fonts.googleapis.com/css?family=Nunito:400,700" rel="stylesheet">
+
+	<!-- Site icon -->
+	<link rel="shortcut icon" href="https://www.rainmeter.net/favicon.ico?v=2">
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body><a href="https://docs.rainmeter.net/cdn-cgi/content?id=jXxR.T1eAYX_RPWvYdEZgDIpx8hpykeLvrEvAXXrPrE-1791125815.547215-1.2.1.1-6rYXXdFs_wi2QfkrpQtMUokRkjub8BIOgbQi0WyFxxYv0zkJ76Cdx3vdF8nAYSO9" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+
+  <!-- Get current path and set it as a variable -->
+
+
+<!-- Include navbar -->
+<nav id="navbar" class="navbar navbar-expand-lg navbar-dark">
+	<div class="container">
+		<a class="navbar-brand" href="https://docs.rainmeter.net"><img src="/img/logo_nav.png" alt=""></a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse justify-content-end" id="mainNavigation">
+			<ul class="navbar-nav order-12">
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//www.rainmeter.net/">Home</a>
+                		</li>
+					
+                
+					
+						<li class="nav-item ">
+                    		<a class="nav-link" href="../../../../index.html">Documentation</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//rainmeter.net/discover">Discover</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//forum.rainmeter.net/">Community</a>
+                		</li>
+					
+                
+                <div class="dropdown-divider"></div>
+		</div>
+	</div>
+</nav>
+
+<div id="content">
+    <div id="nav-button" class="docs-nav-button">
+      <div class="container d-flex flex-row align-items-center">
+      <svg onclick="openNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <a onclick="openNavMenu()">Open navigation</a>
+  </div>
+</div>
+
+  <div class="container">
+    <div class="row">
+
+      <!-- Sidenav -->
+      <div id="menu" class="docs-nav col-12 col-lg-3">
+        
+
+<h4 id="category"><a href="/manual">Manual</a></h4>
+<svg class="closeButton" onclick="closeNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<form id="search-form" method="get" action="https://www.google.com/search">
+  <input name="sitesearch" value="docs.rainmeter.net" type="hidden">
+  <input class="form-control" id="search" name="q" maxlength="255" size="16" placeholder="Search" type="text">
+</form>
+<hr />
+<nav id="sidenav" class="sidenav">
+<h4>Contents</h4>
+<ul class="docs-nav-block">
+	<li><a href="/manual/getting-started/">Getting Started</a>
+		<ul>
+		<li><a href="/manual/getting-started/setting-up/">Setting Up</a>
+		<li><a href="/manual/getting-started/using-rainmeter/">Using Rainmeter</a>
+		<li><a href="/manual/getting-started/customizing/">Customizing</a>
+		<li><a href="/manual/getting-started/creating-skins/">Creating Skins</a>
+		<li><a href="/manual/getting-started/skin-anatomy/">Anatomy of a Skin</a>
+		<li><a href="/manual/getting-started/basic-tutorials/">Basic Tutorials</a>
+			<ul>
+			<li><a href="/manual/getting-started/basic-tutorials/launcher/">Launcher</a>
+			<li><a href="/manual/getting-started/basic-tutorials/clock/">Clock</a>
+			<li><a href="/manual/getting-started/basic-tutorials/system/">System</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/installing-rainmeter/">Installing Rainmeter</a>
+			<ul>
+			<li><a href="/manual/installing-rainmeter/auto-update/">Auto Update</a>
+			</ul>
+	<li><a href="/manual/user-interface/">User Interface</a>
+		<ul>
+		<li><a href="/manual/user-interface/manage/">Manage</a>
+	<ul>
+		<li><a href="/manual/user-interface/manage/new-skin">New Skin</a>
+	</ul>
+		<li><a href="/manual/user-interface/about/">About</a>
+		<li><a href="/manual/user-interface/context-menus/">Context Menus</a>
+		</ul>
+	<li><a href="/manual/installing-skins/">Installing Skins</a>
+	<li><a href="/manual/arranging-skins/">Arranging Skins</a>
+	<li><a href="/manual/distributing-skins/">Distributing Skins</a>
+	<ul>
+		<li><a href="/manual/distributing-skins/vault-folder/">@Vault Folder</a>
+	</ul>
+	</ul>
+
+	<h4>Reference</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/manual/settings/">Settings</a>
+		<ul>
+		<li><a href="/manual/settings/rainmeter-section/">[Rainmeter] Section</a>
+		<li><a href="/manual/settings/traymeasure-section/">[TrayMeasure] Section</a>
+		<li><a href="/manual/settings/skin-sections/">[Skin] Sections</a>
+		</ul>
+	<li><a href="/manual/skins/">Skins</a>
+		<ul>
+		<li><a href="/manual/skins/option-types/">Option Types</a>
+		<li><a href="/manual/skins/rainmeter-section/">[Rainmeter] Section</a>
+			<ul>
+				<li><a href="/manual/skins/rainmeter-section/defaults/">Default Settings
+			</ul>
+		<li><a href="/manual/skins/metadata-section/">[Metadata] Section</a>
+		<li><a href="/manual/skins/include-option/">@Include Options</a>
+		<li><a href="/manual/skins/resources-folder/">@Resources Folder</a>
+		</ul>
+	<li><a href="/manual/meters/">Meters</a>
+		<ul>
+		<li><a href="/manual/meters/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/meters/general-options/image-options/">Image Options</a>
+			<li><a href="/manual/meters/general-options/meterstyles/">MeterStyles</a>
+			<li><a href="/manual/meters/general-options/tooltips/">Tooltips</a>
+			<li><a href="/manual/meters/general-options/container/">Container</a>
+			</ul>
+		<li><a href="/manual/meters/bar/">Bar</a>
+		<li><a href="/manual/meters/bitmap/">Bitmap</a>
+		<li><a href="/manual/meters/button/">Button</a>
+		<li><a href="/manual/meters/histogram/">Histogram</a>
+		<li><a href="/manual/meters/image/">Image</a>
+		<li><a href="/manual/meters/line/">Line</a>
+		<li><a href="/manual/meters/rotator/">Rotator</a>
+		<li><a href="/manual/meters/roundline/">Roundline</a>
+		<li><a href="/manual/meters/shape/">Shape</a>
+		<li><a href="/manual/meters/string/">String</a>
+	<ul>
+		<li><a href="/manual/meters/string/inline/">Inline Options</a>
+	</ul>
+		</ul>
+	<li><a href="/manual/measures/">Measures</a>
+		<ul>
+		<li><a href="/manual/measures/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/measures/general-options/ifactions/">IfActions</a>
+			<li><a href="/manual/measures/general-options/ifconditions/">IfConditions</a>
+			<li><a href="/manual/measures/general-options/ifmatchactions/">IfMatchActions</a>
+			<li><a href="/manual/measures/general-options/substitute/">Substitute</a>
+			</ul>
+		<li><a href="/manual/measures/calc/">Calc</a>
+		<li><a href="/manual/measures/cpu/">CPU</a>
+		<li><a href="/manual/measures/freediskspace/">FreeDiskSpace</a>
+		<li><a href="/manual/measures/loop/">Loop</a>
+		<li><a href="/manual/measures/mediakey/">MediaKey</a>
+		<li><a href="/manual/measures/memory/">Memory</a>
+		<li><a href="/manual/measures/net/">Net</a>
+		<li><a href="/manual/measures/nowplaying/">NowPlaying</a>
+		<li><a href="/manual/measures/plugin/">Plugin</a>
+		<li><a href="/manual/measures/process/">Process</a>
+		<li><a href="/manual/measures/recyclemanager/">RecycleManager</a>
+		<li><a href="/manual/measures/registry/">Registry</a>
+		<li><a href="/manual/measures/script/">Script</a>
+		<li><a href="/manual/measures/string/">String</a>
+		<li><a href="/manual/measures/sysinfo/">SysInfo</a>
+		<li><a href="/manual/measures/time/">Time</a>
+		<li><a href="/manual/measures/uptime/">Uptime</a>
+		<li><a href="/manual/measures/webparser/">WebParser</a>
+		<li><a href="/manual/measures/wifistatus/">WiFiStatus</a>
+		</ul>
+	<li><a href="/manual/plugins/">Plugins</a>
+		<ul>
+		<li><a href="/manual/plugins/actiontimer/">ActionTimer</a>
+		<li><a href="/manual/plugins/audiolevel/">AudioLevel</a>
+		<li><a href="/manual/plugins/coretemp/">CoreTemp</a>
+		<li><a href="/manual/plugins/fileview/">FileView</a>
+		<li><a href="/manual/plugins/folderinfo/">FolderInfo</a>
+		<li><a href="/manual/plugins/inputtext/">InputText</a>
+		<li><a href="/manual/plugins/ping/">Ping</a>
+		<li><a href="/manual/plugins/power/">Power</a>
+		<li><a href="/manual/plugins/quote/">Quote</a>
+		<li><a href="/manual/plugins/resmon/">ResMon</a>
+		<li><a href="/manual/plugins/runcommand/">RunCommand</a>
+		<li><a href="/manual/plugins/speedfan/">SpeedFan</a>
+		<li><a href="/manual/plugins/usagemonitor/">UsageMonitor</a>
+		<li><a href="/manual/plugins/win7audio/">Win7Audio</a>
+		<li><a href="/manual/plugins/windowmessage/">WindowMessage</a>
+		<li><a href="/manual/plugins/deprecated/">Deprecated Plugins</a>
+			<ul>
+			<li><a href="/manual/plugins/deprecated/advancedcpu/">AdvancedCPU</a>
+			<li><a href="/manual/plugins/deprecated/itunes/">iTunes</a>
+			<li><a href="/manual/plugins/deprecated/perfmon/">PerfMon</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/bangs/">Bangs</a>
+	<li><a href="/manual/formulas/">Formulas</a>
+	<li><a href="/manual/variables/">Variables</a>
+		<ul>
+		<li><a href="/manual/variables/nesting-variables/">Nesting Variables</a>
+		<li><a href="/manual/variables/built-in-variables/">Built-In Variables</a>
+		<li><a href="/manual/variables/section-variables/">Section Variables</a>
+		<li><a href="/manual/variables/character-variables/">Character Variables</a>
+		<li><a href="/manual/variables/mouse-variables/">Mouse Variables</a>
+		</ul>
+	<li><a href="/manual/groups/">Groups</a>
+	<li><a href="/manual/mouse-actions/">Mouse Actions</a>
+	<li><a href="/manual/lua-scripting/">Lua Scripting</a>
+		<ul>
+		<li><a href="/manual/lua-scripting/inline-lua/">Inline Lua</a>
+		</ul>
+	</ul>
+
+	<h4>More</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/tips/">Tips &amp; Tricks</a>
+	<li><a href="/snippets/">Snippets</a>
+	<li><a href="/developers/">Developers</a>
+	<li><a href="/history/">Version History</a>
+	</ul>
+
+</nav>
+
+      </div>
+
+      <!-- Content -->
+      <div class="docs-content col-12 col-lg-9">
+        <h1 class="page-title">IfConditions</h1>
+        <hr />
+        <!-- Include content and Replace "!" in every url with correct path -->
+        <p><b>IfCondition</b> options are used in any measure, of any type, to evaluate a mathematical formula. The formula will be evaluated as "true" or "false", and will execute <b>IfTrueAction</b> or <b>IfFalseAction</b> <a href="/manual/skins/option-types/#Action">action options</a>, which will contain one or more <a href="/manual/bangs/">Bangs</a> or commands.</p>
+
+<div class="alert alert-warning alert-tight" role="alert">
+	<h2 class="alert-heading h5" id="Alert"><i class="fa-solid fa-bomb"></i> Alert:</h2>
+	<p>IfCondition can only be used to evaluate a numeric mathematical formula, and only on a measure. No string values may be used in the condition test. See <a href="/manual/measures/general-options/ifmatchactions/">IfMatchActions</a> to test and take action on string values.</p>
+</div>
+
+<p>The formula uses the same syntax as described on the <a href="/manual/formulas/">Formulas page</a> but does not need to be surrounded in parenthesis. Like the <a href="/manual/measures/calc/">Calc measure</a>, measure names do not need [brackets] and are always <a href="/tips/dynamiccheatsheet/">dynamic</a> when referenced inside the IfCondition.</p>
+
+<p>There can be multiple sets of condition and action options in the measure, by using IfCondition2 / IfTrueAction2 / IfFalseAction2 and so on.</p>
+
+<p>IfConditions are similar in functionality to <a href="/manual/measures/general-options/ifactions/">IfActions</a>, with a few important and powerful differences.</p>
+
+<ul>
+	<li>The formula is not based on the value of the measure the IfCondition is in, but can reference any measures, variables or section variables.</li>
+	<li>There can be an IfTrueAction, IfFalseAction or both for each IfCondition, so you can take appropriate actions not only when the result is "true", but also when it is "false".</li> 
+	<li>The syntax allows for a single IfCondition to embed logical AND <code>&&</code> and OR <code>||</code> comparisons in the formula.  Unlike IfEqualValue for instance, which allows for a single comparison, you could use <code>IfCondition=(MeasureName = 5) || (MeasureName = 10)</code>, to check if the value of MeasureName is "5" OR "10".  You can also use the full range of logical operators, so rather than being limited to "equal", "above" or "below", you can use any of <code>&lt;&gt;</code> <code>=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code> <code>&&</code> <code>||</code>.</li>
+</ul>
+
+<h2>Options</h2>
+<dl>
+	<dt id="IfCondition"><code>IfCondition</code>, <code>IfCondition2</code>, ..., <code>IfCondition<em>N</em></code></dt>
+	<dd>
+		<p>A mathematical formula, which when evaluated will result in "true" or "false".</p>
+		<p><b>Examples:</b></p>
+		<p><code>IfCondition=MeasureName &gt;= 10</code></p>
+		<p><code>IfCondition=MeasureOne = (MeasureTwo + #VarName#) / 2</code></p>
+		<p><code>IfCondition=(MeasureName &gt; 5) && (MeasureName &lt; 10)</code></p>
+		<p><code>IfCondition=(MeasureName = 25) || (MeasureName = 50) || (MeasureName = 75)</code></p>
+		<p><b>Note:</b> The comparison on either side of logical AND <code>&&</code> and OR <code>||</code> operators must be enclosed in (parentheses).</p>
+	</dd>
+
+	<dt id="IfTrueAction"><code>IfTrueAction</code>, <code>IfTrueAction2</code>, ..., <code>IfTrueAction<em>N</em></code></dt>
+	<dd>
+		<p>Optional <a href="/manual/skins/option-types/#Action">action</a> to be executed when the formula expressed in IfCondition results in "true". The action is executed only once when the condition becomes "true", so it needs to become "false" and again "true" to execute again.</p>
+	</dd>
+
+	<dt id="IfFalseAction"><code>IfFalseAction</code>, <code>IfFalseAction2</code>, ..., <code>IfFalseAction<em>N</em></code></dt>
+	<dd>
+		<p>Optional <a href="/manual/skins/option-types/#Action">action</a> to be executed when the formula expressed in IfCondition results in "false". The action is executed only once when the condition becomes "false", so it needs to become "true" and again "false" to execute again.</p>
+	</dd>
+
+	<dt id="IfConditionMode"><code>IfConditionMode</code> <small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>If set to <code>1</code>, the evaluation of the condition will execute the appropriate actions in IfTrueAction or IfFalseAction on every update of the measure.</p>
+		<p>This option changes the behavior from "becomes true or false" to "is true or false".</p>
+
+		<p><b>Note:</b> Care should be taken not to create an infinite loop in the actions.  In particular, <code>!Refresh</code>, <code>!Update</code> and <code>!UpdateMeasure #CURRENTSECTION#</code> should generally be avoided when <code>IfConditionMode=1</code>.</p>
+	</dd>
+</dl>
+
+<h2>Example</h2>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[Rainmeter]</span></span><br><span class="line"><span class="attr">Update</span>=<span class="number">1000</span></span><br><span class="line"><span class="attr">DynamicWindowSize</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">AccurateText</span>=<span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeasureCPU]</span></span><br><span class="line"><span class="attr">Measure</span>=CPU</span><br><span class="line"><span class="attr">IfCondition</span>=MeasureCPU &lt; <span class="number">10</span></span><br><span class="line"><span class="attr">IfTrueAction</span>=[!SetOption MeterCPU Text <span class="string">&quot;CPU usage is less than 10 percent&quot;</span>][!UpdateMeter MeterCPU][!Redraw]</span><br><span class="line"><span class="attr">IfCondition2</span>=(MeasureCPU &gt;= <span class="number">10</span>) &amp;&amp; (MeasureCPU &lt;= <span class="number">90</span>)</span><br><span class="line"><span class="attr">IfTrueAction2</span>=[!SetOption MeterCPU Text <span class="string">&quot;CPU usage is between 10 and 90 percent&quot;</span>][!UpdateMeter MeterCPU][!Redraw]</span><br><span class="line"><span class="attr">IfCondition3</span>=MeasureCPU &gt; <span class="number">90</span></span><br><span class="line"><span class="attr">IfTrueAction3</span>=[!SetOption MeterCPU Text <span class="string">&quot;CPU usage is more than 90 percent!&quot;</span>][!UpdateMeter MeterCPU][!Redraw]</span><br><span class="line"></span><br><span class="line"><span class="section">[MeterCPU]</span></span><br><span class="line"><span class="attr">Meter</span>=String</span><br><span class="line"><span class="attr">FontSize</span>=<span class="number">12</span></span><br><span class="line"><span class="attr">FontColor</span>=<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">SolidColor</span>=<span class="number">47</span>,<span class="number">47</span>,<span class="number">47</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">Padding</span>=<span class="number">5</span>,<span class="number">5</span>,<span class="number">5</span>,<span class="number">5</span></span><br><span class="line"><span class="attr">AntiAlias</span>=<span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Include Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-6">© 2026 Rainmeter Team</div>
+      <div class="col-6 text-right"><button id="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> <span>Light theme</span></button></div>
+    </div>
+  </div>
+</footer>
+
+
+
+	<!-- Javascript files  -->
+	<script src="/js/main.js?v=0b0053a2"></script>
+	<script src="/js/jquery-3.2.1.slim.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	<script src="/js/ahk-sliding-panel.js"></script>
+	<script src="/js/jquery.fancybox.min.js"></script>
+
+	<!-- Script for the slideout menu on mobile -->
+	<script>
+		// set slideout menu variables
+		var docsnav = new ahk_slideout({
+		  id: "menu",
+		  side: "left",
+		  width: "18rem",
+		  touch_boundary: "50",
+		  slide_time: "0.2"
+		})
+
+		// function to toggle menu
+		function openNavMenu() {
+		  docsnav.openMenu()
+		}
+		// function to close menu
+		function closeNavMenu() {
+		  docsnav.closeMenu()
+		}
+
+		// when scrolling below 90, add sticky class to nav-button
+		$(function() {
+		  var header = $("#nav-button");
+		  $(window).scroll(function() {
+		    var scroll = $(window).scrollTop();
+		    if (scroll >= 90) {
+		      header.addClass("sticky");
+		    } else {
+		      header.removeClass("sticky");
+		    }
+		  });
+		});
+	</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a455093b29bfede8',t:'MTc5MTEyNTgxNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

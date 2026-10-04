@@ -31,7 +31,7 @@ ROW_MODEL = 21
 ROW_GPU = 20
 ROW_KV = 19
 ROW_QUOTA = 21
-FONT = "Microsoft YaHei UI"
+FONT = "Segoe UI Variable Text"   # Win11 原生 UI 字体；缺失时系统自动回退
 REFRESH_SEC = 6
 SERVER_DEFAULT = "http://your-server-ip:8889"
 BG_1 = "32,32,32,255"          # 卡片渐变上端（Win11 深色中性面 #202020）
@@ -39,6 +39,13 @@ BG_2 = "41,41,41,255"          # 卡片渐变下端
 BORDER = "62,62,62,255"        # 圆角描边 #3E3E3E
 BAR_TROUGH = "58,58,58,255"    # 进度条底槽
 ACCENT_FALLBACK = "76,194,255,255"   # 系统强调色读取失败时使用（Win11 默认蓝）
+# 卡片两套配色（Shape 的 Fill/Stroke 用；由 IfCondition 切换）
+CARD_TOP_DARK_RAW = "32,32,32,255"
+CARD_BOTTOM_DARK_RAW = "41,41,41,255"
+CARD_BORDER_DARK_RAW = "70,70,70,255"
+CARD_TOP_LIGHT_RAW = "250,250,250,255"
+CARD_BOTTOM_LIGHT_RAW = "240,240,240,255"
+CARD_BORDER_LIGHT_RAW = "214,214,214,255"
 
 # ---------------- 字段顺序表（与 build_skin_payload 一一对应）----------------
 # TOP 81 值：0 标题 | 1 状态文字 | 2 状态色 | 3 模型表头
@@ -147,10 +154,11 @@ def emit(outdir, base):
     add("FontColor=190,190,190,255")
     add("[StyleSec]")
     add("FontSize=8.5")
+    add("FontWeight=600")
     add("FontColor=150,150,150,255")
     add("[StyleTitle]")
-    add("FontSize=11.5")
-    add("FontWeight=SemiBold")
+    add("FontSize=11")
+    add("FontWeight=600")
     add("[StyleRight]")
     add("StringAlign=Right")
     add("")
@@ -255,10 +263,13 @@ def emit(outdir, base):
 
     # 表头
     m_line("Title", "String", M, y, text=f"[&t{T_TITLE:02d}]", style="StyleBase,StyleTitle")
-    m_line("Stat", "String", RIGHT, y + 2, text=f"[&t{T_STAT:02d}]", style="StyleBase,StyleTiny,StyleRight",
+    m_line("StatText", "String", RIGHT, y + 2, text=f"[&t{T_STAT:02d}]", style="StyleBase,StyleTiny,StyleRight",
+           color=f"[&t{T_STATC:02d}]")
+    m_line("StatDot", "String", RIGHT - 52, y + 2, text="●", style="StyleBase", size="7",
            color=f"[&t{T_STATC:02d}]")
     y += 24
-    m_line("ModelsHeader", "String", M, y, text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
+    m_line("TickModels", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
+    m_line("ModelsHeader", "String", M + 9, y, text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
     y += 20
     m_line("DivModels", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
 
@@ -276,7 +287,8 @@ def emit(outdir, base):
     y += MODEL_N * ROW_MODEL + 6
 
     # GPU 表头 + 阵列
-    m_line("GpuHeader", "String", M, y, text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
+    m_line("TickGpu", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
+    m_line("GpuHeader", "String", M + 9, y, text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
     y += 20
     m_line("DivGpu", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     g_lbl_x, g_lbl_w = M, 112
@@ -297,7 +309,8 @@ def emit(outdir, base):
     y += GPU_N * ROW_GPU + 6
 
     # CPU 块（带条的行走 Bar）
-    m_line("CpuHeader", "String", M, y, text="CPU 综合", style="StyleBase,StyleSec")
+    m_line("TickCpu", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
+    m_line("CpuHeader", "String", M + 9, y, text="CPU 综合", style="StyleBase,StyleSec")
     y += 20
     m_line("DivCpu", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     kv_bar_rows = {1, 2, 5, 8}          # 与服务器字段顺序对应：总使用率/内存/最高单核/整机功耗
@@ -312,11 +325,12 @@ def emit(outdir, base):
             m_line(f"KBar{i+1}", "Bar", k_bar_x, yy + 5, measure=f"t{base_i+3:02d}",
                    barcolor="[&AccentC]", w=k_bar_w, h=7)
         m_line(f"KValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",
-               style="StyleBase,StyleRight", size="8.5", color=f"[&t{base_i+2:02d}]")
+               style="StyleBase,StyleRight", size="9.5", color=f"[&t{base_i+2:02d}]")
     y += KV_N * ROW_KV + 6
 
     # 电费 / 流量额度
-    m_line("QuotaHeader", "String", M, y, text="电费 / 流量额度", style="StyleBase,StyleSec")
+    m_line("TickQuota", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
+    m_line("QuotaHeader", "String", M + 9, y, text="电费 / 流量额度", style="StyleBase,StyleSec")
     y += 20
     m_line("DivQuota", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     for i in range(QUOTA_N):
@@ -327,40 +341,46 @@ def emit(outdir, base):
         m_line(f"QBar{i+1}", "Bar", k_bar_x, yy + 6, measure=f"t{base_i+3:02d}",
                barcolor="[&AccentC]", w=k_bar_w, h=7)
         m_line(f"QValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",
-               style="StyleBase,StyleRight", size="8.5", color=f"[&t{base_i+2:02d}]")
+               style="StyleBase,StyleRight", size="9.5", color=f"[&t{base_i+2:02d}]")
     y += QUOTA_N * ROW_QUOTA + 6
 
     card_h = y
 
     # ---------------- 输出 meter ----------------
     add("; ---------------- 背景与点击区 ----------------")
-    add("[BG]")
-    add("Meter=Image")
+    add("; 卡片：圆角 + 竖向渐变。颜色不能用 [&度量] 直接写在 Shape 串里（动态变量在 Shape 里不保证生效），")
+    add("; 改由 [msThemeNum] 的 IfCondition 用 !SetOption 按主题设置，这也是 Rainmeter 官方推荐的动态改样式做法。")
+    add("[Card]")
+    add("Meter=Shape")
     add("X=0")
     add("Y=0")
-    add(f"W={CARD_W}")
-    add(f"H={card_h}")
-    add("SolidColor=[&msCardTop]")
-    add("SolidColor2=[&msCardBottom]")
+    add(f"Shape=Rectangle 0,0,{CARD_W},{card_h},7 | Fill LinearGradient 90 | {CARD_TOP_DARK_RAW};0.0 | {CARD_BOTTOM_DARK_RAW};1.0 | StrokeWidth 1 | Stroke Color {CARD_BORDER_DARK_RAW}")
+    add("")
+
+    def card_shape(top, bottom, border):
+        # 高度代入真实数字：!SetOption 的值不会再做模板替换，写占位符会让形状失效
+        return (f"Rectangle 0,0,{CARD_W},{card_h},7 | Fill LinearGradient 90 | {top};0.0 | "
+                f"{bottom};1.0 | StrokeWidth 1 | Stroke Color {border}")
+
+    add("; 按系统主题切换卡片配色（IfCondition + !SetOption：官方推荐的动态改样式方式）")
+    add("[msThemeApply]")
+    add("Measure=Calc")
+    add("Formula=[&msThemeNum]")
     add("DynamicVariables=1")
-    add("GradientAngle=90")
+    add("IfCondition=([msThemeApply] = 1)")
+    add(f'IfTrueAction=[!SetOption "Card" "Shape" "{card_shape(CARD_TOP_LIGHT_RAW, CARD_BOTTOM_LIGHT_RAW, CARD_BORDER_LIGHT_RAW)}"][!UpdateMeter "Card"][!Redraw]')
+    add(f'IfFalseAction=[!SetOption "Card" "Shape" "{card_shape(CARD_TOP_DARK_RAW, CARD_BOTTOM_DARK_RAW, CARD_BORDER_DARK_RAW)}"][!UpdateMeter "Card"][!Redraw]')
     add("")
     add("[AccentSpine]")
     add("Meter=Image")
     add("X=0")
-    add("Y=0")
+    add("Y=7")
     add("W=3")
-    add(f"H={card_h}")
+    add(f"H={card_h - 14}")
     add("SolidColor=[&AccentC]")
     add("DynamicVariables=1")
     add("")
-    add("[Border]")
-    add("Meter=Shape")
-    add("X=0")
-    add("Y=0")
-    add(f"Shape=Rectangle 0.5,0.5,{CARD_W - 1},{card_h - 1},7 | StrokeWidth 1 | Stroke Color [&msCardBorder] | Fill Color 0,0,0,0")
-    add("DynamicVariables=1")
-    add("")
+
     add("[ClickZone]")
     add("Meter=Image")
     add("X=0")
