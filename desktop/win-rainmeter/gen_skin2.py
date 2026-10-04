@@ -34,9 +34,10 @@ ROW_QUOTA = 20
 FONT = "Microsoft YaHei UI"
 REFRESH_SEC = 6
 SERVER_DEFAULT = "http://your-server-ip:8889"
-BAR_TROUGH = "30,41,59,255"
-BG_1 = "13,19,33,255"
-BG_2 = "18,26,44,255"
+BG_1 = "10,15,26,255"        # 卡片渐变上端（完全不透明，避免壁纸透过来影响辨识）
+BG_2 = "19,27,45,255"        # 卡片渐变下端
+BORDER = "64,88,132,255"     # 圆角描边
+BAR_TROUGH = "38,52,74,255"  # 进度条底槽
 
 # ---------------- 字段顺序表（与 build_skin_payload 一一对应）----------------
 # TOP 81 值：0 标题 | 1 状态文字 | 2 状态色 | 3 模型表头
@@ -115,6 +116,11 @@ def emit(outdir, base):
     add(f"; 唯一需要改的配置：服务器地址（EasyTier 内网 your-server-ip + 控制台端口 8889）")
     add(f"SERVER={SERVER_DEFAULT}")
     add(f"REFRESH_SEC={REFRESH_SEC}")
+    add("; 配色（想微调只改这几行）：卡片渐变两端 / 圆角描边 / 进度条底槽")
+    add(f"BG_TOP={BG_1}")
+    add(f"BG_BOTTOM={BG_2}")
+    add(f"BORDER={BORDER}")
+    add(f"TROUGH={BAR_TROUGH}")
     add("")
 
     # ---------------- 样式（只放字体/颜色，绝不放 X/Y：避免坐标被样式影响）----------------
@@ -125,11 +131,11 @@ def emit(outdir, base):
     add("FontColor=226,232,240,255")
     add("AntiAlias=1")
     add("[StyleTiny]")
-    add("FontSize=7.5")
-    add("FontColor=100,116,139,255")
+    add("FontSize=8")
+    add("FontColor=141,155,175,255")
     add("[StyleSec]")
     add("FontSize=8")
-    add("FontColor=148,163,184,255")
+    add("FontColor=166,180,200,255")
     add("[StyleTitle]")
     add("FontSize=11")
     add("FontWeight=Bold")
@@ -267,9 +273,15 @@ def emit(outdir, base):
     add("Y=0")
     add(f"W={CARD_W}")
     add(f"H={card_h}")
-    add(f"SolidColor={BG_1}")
-    add(f"SolidColor2={BG_2}")
+    add("SolidColor=#BG_TOP#")
+    add("SolidColor2=#BG_BOTTOM#")
     add("GradientAngle=90")
+    add("")
+    add("[Border]")
+    add("Meter=Shape")
+    add("X=0")
+    add("Y=0")
+    add(f"Shape=Rectangle 0.5,0.5,{CARD_W - 1},{card_h - 1},7 | StrokeWidth 1 | Stroke Color #BORDER# | Fill Color 0,0,0,0")
     add("")
     add("[ClickZone]")
     add("Meter=Image")
@@ -294,7 +306,7 @@ def emit(outdir, base):
             add(f"MeasureName={kw.pop('measure')}")
             add("BarOrientation=Horizontal")
             add(f"BarColor={kw.pop('barcolor')}")
-            add(f"SolidColor={BAR_TROUGH}")
+            add("SolidColor=#TROUGH#")
         if "w" in kw:
             add(f"W={kw.pop('w')}")
         if "h" in kw:
