@@ -113,6 +113,8 @@ def scope_of(name, kv):
             sc.append("measure_string")
         elif t == "calc":
             sc.append("measure_calc")
+        elif t == "registry":
+            sc.append("measure_registry")
         # WebParser 既是度量类型也可写作 Plugin=WebParser（旧写法），两种都要认
         if t == "webparser":
             sc.append("webparser")

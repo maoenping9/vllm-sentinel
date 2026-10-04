@@ -27,6 +27,7 @@ MAP = {
     "measures_general-options.html": ["measure_general"],
     "measures_string.html": ["measure_string"],
     "measures_calc.html": ["measure_calc"],
+    "registry.html": ["measure_registry"],
     "webparser.html": ["webparser", "meter_plugin"],
     "plugins_webparser.html": ["webparser", "meter_plugin"],
     "skins_rainmeter-section.html": ["skin_rainmeter"],

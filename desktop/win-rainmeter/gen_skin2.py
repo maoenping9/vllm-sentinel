@@ -27,17 +27,18 @@ M = 14
 CONTENT = CARD_W - 2 * M          # 392
 RIGHT = CARD_W - M                # 406，右对齐锚点
 PAD_TOP = 10
-ROW_MODEL = 19
-ROW_GPU = 18
-ROW_KV = 17
-ROW_QUOTA = 20
+ROW_MODEL = 21
+ROW_GPU = 20
+ROW_KV = 19
+ROW_QUOTA = 21
 FONT = "Microsoft YaHei UI"
 REFRESH_SEC = 6
 SERVER_DEFAULT = "http://your-server-ip:8889"
-BG_1 = "10,15,26,255"        # 卡片渐变上端（完全不透明，避免壁纸透过来影响辨识）
-BG_2 = "19,27,45,255"        # 卡片渐变下端
-BORDER = "64,88,132,255"     # 圆角描边
-BAR_TROUGH = "38,52,74,255"  # 进度条底槽
+BG_1 = "32,32,32,255"          # 卡片渐变上端（Win11 深色中性面 #202020）
+BG_2 = "41,41,41,255"          # 卡片渐变下端
+BORDER = "62,62,62,255"        # 圆角描边 #3E3E3E
+BAR_TROUGH = "58,58,58,255"    # 进度条底槽
+ACCENT_FALLBACK = "76,194,255,255"   # 系统强调色读取失败时使用（Win11 默认蓝）
 
 # ---------------- 字段顺序表（与 build_skin_payload 一一对应）----------------
 # TOP 81 值：0 标题 | 1 状态文字 | 2 状态色 | 3 模型表头
@@ -121,24 +122,28 @@ def emit(outdir, base):
     add(f"BG_BOTTOM={BG_2}")
     add(f"BORDER={BORDER}")
     add(f"TROUGH={BAR_TROUGH}")
+    add("; 系统强调色自动读取（注册表 HKCU/Software/Microsoft/Windows/DWM/AccentColor）；读不到就用下面这个兜底色")
+    add(f"ACCENT_FALLBACK={ACCENT_FALLBACK}")
+    add("; 字体：想换字体只改这一行（如 Segoe UI Variable Text / 微软雅黑 / HarmonyOS Sans）")
+    add(f"FONT_FACE={FONT}")
     add("")
 
     # ---------------- 样式（只放字体/颜色，绝不放 X/Y：避免坐标被样式影响）----------------
     add("; 样式节：仅字体类属性。Rainmeter 规则是 Meter 自身选项优先于样式，但仍不在此放坐标")
     add("[StyleBase]")
-    add(f"FontFace={FONT}")
+    add("FontFace=#FONT_FACE#")
     add("FontSize=9")
-    add("FontColor=226,232,240,255")
+    add("FontColor=255,255,255,255")
     add("AntiAlias=1")
     add("[StyleTiny]")
-    add("FontSize=8")
-    add("FontColor=141,155,175,255")
+    add("FontSize=8.5")
+    add("FontColor=190,190,190,255")
     add("[StyleSec]")
-    add("FontSize=8")
-    add("FontColor=166,180,200,255")
+    add("FontSize=8.5")
+    add("FontColor=150,150,150,255")
     add("[StyleTitle]")
-    add("FontSize=11")
-    add("FontWeight=Bold")
+    add("FontSize=11.5")
+    add("FontWeight=SemiBold")
     add("[StyleRight]")
     add("StringAlign=Right")
     add("")
@@ -163,6 +168,36 @@ def emit(outdir, base):
             add("MinValue=0")
             add("MaxValue=100")
         add("")
+
+    # 系统强调色：AccentColor 是 DWORD（0xAABBGGRR），用位运算拆出 R/G/B
+    add("; ---------------- 系统强调色（自动跟随 Windows 个性化颜色）----------------")
+    add("[AccentV]")
+    add("Measure=Registry")
+    add("RegHKey=HKEY_CURRENT_USER")
+    add("RegKey=Software\\Microsoft\\Windows\\DWM")
+    add("RegValue=AccentColor")
+    add("")
+    add("[AccentR]")
+    add("Measure=Calc")
+    add("Formula=(Trunc([&AccentV]/65536) & 255)")
+    add("DynamicVariables=1")
+    add("")
+    add("[AccentG]")
+    add("Measure=Calc")
+    add("Formula=(Trunc([&AccentV]/256) & 255)")
+    add("DynamicVariables=1")
+    add("")
+    add("[AccentB]")
+    add("Measure=Calc")
+    add("Formula=([&AccentV] & 255)")
+    add("DynamicVariables=1")
+    add("")
+    add("[AccentC]")
+    add("Measure=String")
+    add("String=[&AccentR],[&AccentG],[&AccentB],255")
+    add('Substitute="0,0,0,255":"#ACCENT_FALLBACK#"')
+    add("DynamicVariables=1")
+    add("")
 
     parent("WebTop", "top", TOP_LEN)
     parent("WebGpu", "gpu", GPU_LEN)
@@ -195,6 +230,7 @@ def emit(outdir, base):
     y += 24
     m_line("ModelsHeader", "String", M, y, text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
     y += 20
+    m_line("DivModels", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
 
     # 模型行
     name_x, name_w = M + 13, 148
@@ -212,6 +248,7 @@ def emit(outdir, base):
     # GPU 表头 + 阵列
     m_line("GpuHeader", "String", M, y, text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
     y += 20
+    m_line("DivGpu", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
     g_lbl_x, g_lbl_w = M, 112
     g_mem_x, g_mem_w = M + 114, 42
     g_bar_x, g_bar_w = M + 162, 96
@@ -232,6 +269,7 @@ def emit(outdir, base):
     # CPU 块（带条的行走 Bar）
     m_line("CpuHeader", "String", M, y, text="CPU 综合", style="StyleBase,StyleSec")
     y += 20
+    m_line("DivCpu", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
     kv_bar_rows = {1, 2, 5, 8}          # 与服务器字段顺序对应：总使用率/内存/最高单核/整机功耗
     k_lbl_x, k_lbl_w = M, 108
     k_bar_x, k_bar_w = M + 116, 150
@@ -242,7 +280,7 @@ def emit(outdir, base):
                style="StyleBase,StyleSec", size="8.5", w=k_lbl_w)
         if (i + 1) in kv_bar_rows:
             m_line(f"KBar{i+1}", "Bar", k_bar_x, yy + 5, measure=f"t{base_i+3:02d}",
-                   barcolor="110,140,255,255", w=k_bar_w, h=6)
+                   barcolor="[&AccentC]", w=k_bar_w, h=7)
         m_line(f"KValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",
                style="StyleBase,StyleRight", size="8.5", color=f"[&t{base_i+2:02d}]")
     y += KV_N * ROW_KV + 6
@@ -250,13 +288,14 @@ def emit(outdir, base):
     # 电费 / 流量额度
     m_line("QuotaHeader", "String", M, y, text="电费 / 流量额度", style="StyleBase,StyleSec")
     y += 20
+    m_line("DivQuota", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
     for i in range(QUOTA_N):
         base_i = T_QUOTA + i * 4
         yy = y + i * ROW_QUOTA
         m_line(f"QLabel{i+1}", "String", M, yy, text=f"[&t{base_i:02d}]",
                style="StyleBase,StyleSec", size="8.5", w=k_lbl_w)
         m_line(f"QBar{i+1}", "Bar", k_bar_x, yy + 6, measure=f"t{base_i+3:02d}",
-               barcolor=f"[&t{base_i+2:02d}]", w=k_bar_w, h=7)
+               barcolor="[&AccentC]", w=k_bar_w, h=7)
         m_line(f"QValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",
                style="StyleBase,StyleRight", size="8.5", color=f"[&t{base_i+2:02d}]")
     y += QUOTA_N * ROW_QUOTA + 6
@@ -276,6 +315,15 @@ def emit(outdir, base):
     add("SolidColor=#BG_TOP#")
     add("SolidColor2=#BG_BOTTOM#")
     add("GradientAngle=90")
+    add("")
+    add("[AccentSpine]")
+    add("Meter=Image")
+    add("X=0")
+    add("Y=0")
+    add("W=3")
+    add(f"H={card_h}")
+    add("SolidColor=[&AccentC]")
+    add("DynamicVariables=1")
     add("")
     add("[Border]")
     add("Meter=Shape")
@@ -319,6 +367,8 @@ def emit(outdir, base):
             add(f"ClipString={kw.pop('clip')}")
         if "color" in kw:
             add(f"FontColor={kw.pop('color')}")
+        if "solid" in kw:
+            add(f"SolidColor={kw.pop('solid')}")
         if "text" in kw:
             add(f"Text={kw.pop('text')}")
         if kw:
