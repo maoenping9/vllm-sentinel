@@ -41,9 +41,17 @@ def _ppid(pid: int) -> int | None:
 
 
 # 非 vLLM 的 GPU 常驻服务：cmdline 关键字 → (显示名, 端口)
+# 2026-10-08 校准：GPU0(3090Ti) 上常驻 4 个小服务（此前只认出 1 个，且名字/端口是迁移前的旧值）：
+#   laya-decision-api.py → Laya-421M :8012
+#   id-decision-api.py   → ID-Decision-2B :8013
+#   embed-wemm-mm-gpu.py → WeMM-Embedding-4B :8021（2026-10-04 由 9B:8008 换成 4B）
+#   otc_rerank.py        → OTC-Rerank :18004（WeKnora 重排）
 _NON_VLLM_SERVICES: list[tuple[str, str, int]] = [
-    ("embed-wemm-mm-gpu", "WeMM-Embedding-9B", 8008),
-    ("embed-wemm-mm-cpu", "WeMM-Embedding-9B-CPU", 8008),
+    ("laya-decision-api", "Laya-421M", 8012),
+    ("id-decision-api", "ID-Decision-2B", 8013),
+    ("embed-wemm-mm-gpu", "WeMM-Embedding-4B", 8021),
+    ("embed-wemm-mm-cpu", "WeMM-Embedding-4B-CPU", 8021),
+    ("otc_rerank", "OTC-Rerank", 18004),
     ("embed-cpu-8008", "Qwen3-Embedding-0.6B", 8008),
 ]
 
@@ -160,29 +168,47 @@ def resolve(gpu_items: list[dict[str, Any]], vllm_instances: list[dict[str, Any]
             continue
     name_to_port = {name: port for port, name in port_to_name.items()}
 
-    # GPU 索引 → (服务名, 端口)
-    gpu_owner: dict[int, tuple[str, int]] = {}
+    # GPU 索引 → [(服务名, 端口, 该进程显存MB), ...]
+    # 2026-10-08：一张卡可能同时常驻多个小服务（GPU0 有 4 个），必须全部收集，
+    # 之前"找到第一个就 break"会漏报；同时记录各进程显存，用于按服务显示真实占用。
+    gpu_owner: dict[int, list[tuple[tuple[str, int], float]]] = {}
     for g in gpu_items:
+        owners: list[tuple[tuple[str, int], float]] = []
         for proc in g.get("processes", []):
             owner = _owner(int(proc["pid"]), port_to_name)
             if owner:
-                gpu_owner[g["index"]] = owner
-                break
+                owners.append((owner, float(proc.get("memory_mb") or 0)))
+        gpu_owner[g["index"]] = owners
 
-    # 按服务名聚合 GPU 索引
+    # 按服务名聚合 GPU 索引与显存
     svc_to_meta: dict[str, dict[str, Any]] = {}
-    for idx, (svc, port) in gpu_owner.items():
-        meta = svc_to_meta.setdefault(svc, {"service": svc, "gpus": [], "port": port})
-        meta["gpus"].append(idx)
+    for idx, owners in gpu_owner.items():
+        for (svc, port), mem_mb in owners:
+            meta = svc_to_meta.setdefault(
+                svc, {"service": svc, "gpus": [], "port": port, "mem_mb": 0.0})
+            if idx not in meta["gpus"]:
+                meta["gpus"].append(idx)
+            meta["mem_mb"] += mem_mb
     for meta in svc_to_meta.values():
         meta["gpus"] = sorted(meta["gpus"])
+
+    # gpu.items[*].service：取该卡上显存最大的那个服务作为代表（一行放不下多个名字），
+    # 完整清单放在 services 字段里备用
+    for g in gpu_items:
+        owners = gpu_owner.get(g["index"]) or []
+        if owners:
+            owners_sorted = sorted(owners, key=lambda x: x[1], reverse=True)
+            g["service"] = owners_sorted[0][0][0]
+            g["services"] = [svc for (svc, _), _ in owners_sorted]
 
     # 回填 vllm.instances[*].gpus：按实例自身端口匹配（同名多实例也不会互相污染）；
     # v93：占位端口 0 的服务（容器化 vLLM，cmdline 无 --port）按服务名匹配——
     # 实例名与 gpu_owner 服务名一致（同源于 served-model-name）且唯一时回填
     port_gpus: dict[int, list[int]] = {}
-    for idx, (svc, port) in gpu_owner.items():
-        port_gpus.setdefault(port, []).append(idx)
+    for idx, owners in gpu_owner.items():
+        for (svc, port), _mem in owners:
+            if idx not in port_gpus.setdefault(port, []):
+                port_gpus[port].append(idx)
     for plist in port_gpus.values():
         plist.sort()
     name_gpus: dict[str, list[int]] = {}
@@ -202,10 +228,7 @@ def resolve(gpu_items: list[dict[str, Any]], vllm_instances: list[dict[str, Any]
         else:
             inst["gpus"] = []
 
-    # 回填 gpu.items[*].service
-    for g in gpu_items:
-        owner = gpu_owner.get(g["index"])
-        g["service"] = owner[0] if owner else ""
+    # 回填 gpu.items[*].service 已在上方按"显存最大者"完成（一卡多服务见 gpu["services"]）
 
     # 稳定排序：有端口的按端口，无端口的（非 vLLM）排末尾
     return sorted(svc_to_meta.values(), key=lambda m: (m.get("port", 1 << 30), m["service"]))

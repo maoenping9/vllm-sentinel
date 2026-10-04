@@ -135,7 +135,13 @@ def emit(outdir, base):
     add("CARD_BORDER_LIGHT=214,214,214,255")
     add("CARD_TROUGH_LIGHT=226,226,226,255")
     add("CARD_DIVIDER_LIGHT=0,0,0,20")
-    add("; 文字/告警/模型配色由服务端按 theme 参数给全")
+    add("TEXT_DARK=255,255,255,255")
+    add("DIM_DARK=190,190,190,255")
+    add("SEC_DARK=150,150,150,255")
+    add("TEXT_LIGHT=26,26,26,255")
+    add("DIM_LIGHT=92,92,92,255")
+    add("SEC_LIGHT=118,118,118,255")
+    add("; 告警色/模型配色由服务端按 theme 参数给全；上面这些是默认文字色，由皮肤本地按主题算")
     add("; 系统强调色自动读取（注册表 HKCU/Software/Microsoft/Windows/DWM/AccentColor）；读不到就用下面这个兜底色")
     add(f"ACCENT_FALLBACK={ACCENT_FALLBACK}")
     add("; 字体：想换字体只改这一行（如 Segoe UI Variable Text / 微软雅黑 / HarmonyOS Sans）")
@@ -144,18 +150,16 @@ def emit(outdir, base):
 
     # ---------------- 样式（只放字体/颜色，绝不放 X/Y：避免坐标被样式影响）----------------
     add("; 样式节：仅字体类属性。Rainmeter 规则是 Meter 自身选项优先于样式，但仍不在此放坐标")
+    add("; 样式只放字体属性，绝不放颜色：颜色按主题显式给（浅色主题下白字会整片看不见）")
     add("[StyleBase]")
     add("FontFace=#FONT_FACE#")
     add("FontSize=9")
-    add("FontColor=255,255,255,255")
     add("AntiAlias=1")
     add("[StyleTiny]")
     add("FontSize=8.5")
-    add("FontColor=190,190,190,255")
     add("[StyleSec]")
     add("FontSize=8.5")
     add("FontWeight=600")
-    add("FontColor=150,150,150,255")
     add("[StyleTitle]")
     add("FontSize=11")
     add("FontWeight=600")
@@ -227,8 +231,9 @@ def emit(outdir, base):
     add("Formula=[&msThemeRaw]")
     add("DynamicVariables=1")
     add("")
+    text_roles = (("Text", "TEXT"), ("Dim", "DIM"), ("Sec", "SEC"))
     for role, var in (("CardTop", "CARD_TOP"), ("CardBottom", "CARD_BOTTOM"), ("CardBorder", "CARD_BORDER"),
-                      ("CardTrough", "CARD_TROUGH"), ("CardDivider", "CARD_DIVIDER")):
+                      ("CardTrough", "CARD_TROUGH"), ("CardDivider", "CARD_DIVIDER")) + text_roles:
         add(f"[ms{role}]")
         add("Measure=String")
         add("String=[&msThemeNum]")
@@ -262,14 +267,15 @@ def emit(outdir, base):
     card_h = 0  # 先占位，最后回填
 
     # 表头
-    m_line("Title", "String", M, y, text=f"[&t{T_TITLE:02d}]", style="StyleBase,StyleTitle")
+    m_line("Title", "String", M, y, text=f"[&t{T_TITLE:02d}]", style="StyleBase,StyleTitle",
+           color="[&msText]")
     m_line("StatText", "String", RIGHT, y + 2, text=f"[&t{T_STAT:02d}]", style="StyleBase,StyleTiny,StyleRight",
            color=f"[&t{T_STATC:02d}]")
     m_line("StatDot", "String", RIGHT - 52, y + 2, text="●", style="StyleBase", size="7",
            color=f"[&t{T_STATC:02d}]")
     y += 24
     m_line("TickModels", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
-    m_line("ModelsHeader", "String", M + 9, y, text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
+    m_line("ModelsHeader", "String", M + 9, y, color="[&msSec]", text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
     y += 20
     m_line("DivModels", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
 
@@ -283,12 +289,12 @@ def emit(outdir, base):
         m_line(f"MName{i+1}", "String", name_x, yy, text=f"[&t{base_i:02d}]",
                style="StyleBase", w=name_w, clip="1", color=f"[&t{base_i+2:02d}]")
         m_line(f"MValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",
-               style="StyleBase,StyleTiny,StyleRight")
+               style="StyleBase,StyleTiny,StyleRight", color="[&msDim]")
     y += MODEL_N * ROW_MODEL + 6
 
     # GPU 表头 + 阵列
     m_line("TickGpu", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
-    m_line("GpuHeader", "String", M + 9, y, text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
+    m_line("GpuHeader", "String", M + 9, y, color="[&msSec]", text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
     y += 20
     m_line("DivGpu", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     g_lbl_x, g_lbl_w = M, 112
@@ -299,18 +305,18 @@ def emit(outdir, base):
         base_i = G_GPU + i * 5
         yy = y + i * ROW_GPU
         m_line(f"GLabel{i+1}", "String", g_lbl_x, yy, text=f"[&g{base_i:02d}]",
-               style="StyleBase", size="8.5", w=g_lbl_w, clip="1")
+               style="StyleBase", size="8.5", w=g_lbl_w, clip="1", color="[&msText]")
         m_line(f"GMem{i+1}", "String", g_mem_x + g_mem_w, yy, text=f"[&g{base_i+1:02d}]",
-               style="StyleBase,StyleTiny", size="8", align="right")
+               style="StyleBase,StyleTiny", size="8", align="right", color="[&msDim]")
         m_line(f"GBar{i+1}", "Bar", g_bar_x, yy + 6, measure=f"g{base_i+3:02d}",
                barcolor=f"[&g{base_i+4:02d}]", w=g_bar_w, h=6)
         m_line(f"GMeta{i+1}", "String", g_meta_x, yy, text=f"[&g{base_i+2:02d}]",
-               style="StyleBase,StyleTiny", size="8", w=g_meta_w, clip="1")
+               style="StyleBase,StyleTiny", size="8", w=g_meta_w, clip="1", color="[&msDim]")
     y += GPU_N * ROW_GPU + 6
 
     # CPU 块（带条的行走 Bar）
     m_line("TickCpu", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
-    m_line("CpuHeader", "String", M + 9, y, text="CPU 综合", style="StyleBase,StyleSec")
+    m_line("CpuHeader", "String", M + 9, y, color="[&msSec]", text="CPU 综合", style="StyleBase,StyleSec")
     y += 20
     m_line("DivCpu", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     kv_bar_rows = {1, 2, 5, 8}          # 与服务器字段顺序对应：总使用率/内存/最高单核/整机功耗
@@ -320,7 +326,7 @@ def emit(outdir, base):
         base_i = T_KV + i * 4
         yy = y + i * ROW_KV
         m_line(f"KLabel{i+1}", "String", k_lbl_x, yy, text=f"[&t{base_i:02d}]",
-               style="StyleBase,StyleSec", size="8.5", w=k_lbl_w)
+               style="StyleBase,StyleSec", size="8.5", w=k_lbl_w, color="[&msSec]")
         if (i + 1) in kv_bar_rows:
             m_line(f"KBar{i+1}", "Bar", k_bar_x, yy + 5, measure=f"t{base_i+3:02d}",
                    barcolor="[&AccentC]", w=k_bar_w, h=7)
@@ -330,14 +336,14 @@ def emit(outdir, base):
 
     # 电费 / 流量额度
     m_line("TickQuota", "Image", M, y + 2, w=3, h=9, solid="[&AccentC]")
-    m_line("QuotaHeader", "String", M + 9, y, text="电费 / 流量额度", style="StyleBase,StyleSec")
+    m_line("QuotaHeader", "String", M + 9, y, color="[&msSec]", text="电费 / 流量额度", style="StyleBase,StyleSec")
     y += 20
     m_line("DivQuota", "Image", M, y - 6, w=CONTENT, h=1, solid="[&msCardDivider]")
     for i in range(QUOTA_N):
         base_i = T_QUOTA + i * 4
         yy = y + i * ROW_QUOTA
         m_line(f"QLabel{i+1}", "String", M, yy, text=f"[&t{base_i:02d}]",
-               style="StyleBase,StyleSec", size="8.5", w=k_lbl_w)
+               style="StyleBase,StyleSec", size="8.5", w=k_lbl_w, color="[&msSec]")
         m_line(f"QBar{i+1}", "Bar", k_bar_x, yy + 6, measure=f"t{base_i+3:02d}",
                barcolor="[&AccentC]", w=k_bar_w, h=7)
         m_line(f"QValue{i+1}", "String", RIGHT, yy, text=f"[&t{base_i+1:02d}]",

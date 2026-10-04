@@ -50,6 +50,11 @@ SHORT_NAMES = {
     "DeepSeek-V4-Flash-Exp": "DSV4-V",
     "DeepSeek-V4.1-Flash": "DSV4.1",
     "Qwen3.8-27B-W4A16": "Qwen3.8",
+    "WeMM-Embedding-4B": "EB-4B",
+    "WeMM-Embedding-4B-CPU": "EB-4B-CPU",
+    "Laya-421M": "Laya",
+    "ID-Decision-2B": "ID-2B",
+    "OTC-Rerank": "Rerank",
     "WeMM-Embedding-9B": "EB-9B",
     "MiniMax-H3": "MiniMax-H3",
     "Qwen3.8-27B-INT8": "Qwen3.8-INT8",
@@ -77,7 +82,8 @@ _CANON_RULES = [
     (re.compile(r"^dsv4", re.I), "DeepSeek-V4-Flash-Exp"),
     (re.compile(r"^deepseek[-_ ]?v4", re.I), "DeepSeek-V4-Flash-Exp"),
     (re.compile(r"^glm", re.I), "GLM-5.3-Flash"),
-    (re.compile(r"^wemm", re.I), "WeMM-Embedding-9B"),
+    (re.compile(r"^wemm.*4b", re.I), "WeMM-Embedding-4B"),
+    (re.compile(r"^wemm", re.I), "WeMM-Embedding-4B"),
     (re.compile(r"^unlimited[-_ ]?ocr", re.I), "Unlimited-OCR"),
     (re.compile(r"^minimax", re.I), "MiniMax-H3"),
 ]
@@ -183,6 +189,7 @@ def build_model_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
             "name": canon, "count": 0, "online": 0, "starting": 0, "tok": 0.0,
             "kv": 0.0, "kvN": 0, "gpus": [], "from_vllm": False, "from_gpu": False,
             "from_cpu": False, "gpu_present": False, "cpu_present": False,
+            "mem_mb": 0.0,
         })
 
     def merge_gpus(row: dict[str, Any], gpus: list[int] | None) -> None:
@@ -216,6 +223,7 @@ def build_model_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
         row["count"] += 1
         row["from_gpu"] = True
         row["gpu_present"] = True
+        row["mem_mb"] += float(gm.get("mem_mb") or 0)
         merge_gpus(row, gm.get("gpus"))
 
     for sm in state.get("small_models") or []:
@@ -234,7 +242,10 @@ def build_model_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
         if r["from_cpu"]:
             value = "CPU · 进程在跑"
         elif (not r["from_vllm"]) and r["from_gpu"]:
-            used = sum(float((items.get(g) or {}).get("memory_used_mb") or 0) for g in r["gpus"])
+            # 一卡多服务时整卡占用会被重复计给每个服务，所以优先用该服务自身进程显存
+            own = float(r.get("mem_mb") or 0)
+            used = own if own > 0 else sum(
+                float((items.get(g) or {}).get("memory_used_mb") or 0) for g in r["gpus"])
             value = f"GPU {gpu_str} · {used / 1024:.1f}G 显存"
         elif online:
             kv = (r["kv"] / r["kvN"]) if r["kvN"] else 0.0
