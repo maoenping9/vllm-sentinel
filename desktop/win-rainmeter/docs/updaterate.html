@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Meta tags for proper character encoding and social media handling  -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.9, maximum-scale=0.9">
+	<meta itemprop="name" content="WebParser: How UpdateRate Works - Rainmeter Docs">
+	<meta property="og:title" content="WebParser: How UpdateRate Works - Rainmeter Docs">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://www.rainmeter.net">
+	<meta property="og:image" content="https://www.rainmeter.net/img/media_image.png">
+	<meta property="og:site_name" content="Rainmeter">
+	<meta property="og:locale" content="en_US" />
+
+	<!-- Page title  -->
+	<title>WebParser: How UpdateRate Works - Rainmeter Documentation</title>
+
+	<script>
+		(function() {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('theme');
+			} catch (e) {
+			}
+			if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				theme = 'dark';
+			}
+			if (theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				document.documentElement.style.colorScheme = theme;
+			}
+		})();
+	</script>
+
+	<!-- Files need to be local for offline version of documentations -->
+	<link rel="stylesheet" href="/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/css/rainmeter.css?v=24f3b22e">
+	<link rel="stylesheet" href="/css/jquery.fancybox.min.css">
+	<link rel="stylesheet" href="/css/fontawesome.css">
+	<link rel="stylesheet" href="/css/solid.css">
+
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600">
+	<link href="https://fonts.googleapis.com/css?family=Nunito:400,700" rel="stylesheet">
+
+	<!-- Site icon -->
+	<link rel="shortcut icon" href="https://www.rainmeter.net/favicon.ico?v=2">
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body><a href="https://docs.rainmeter.net/cdn-cgi/content?id=WLHv4mVU1bCzOI6mTtb9gMRORsfZyue_RjbB.BUVqZ4-1791122278.9913619-1.2.1.1-T9un9ORCS.LszgkfcCkEZOcr7ki7luESp9v479vRQSwUbBpZh3KgY3EmRmqHjGgs" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+
+  <!-- Get current path and set it as a variable -->
+
+
+<!-- Include navbar -->
+<nav id="navbar" class="navbar navbar-expand-lg navbar-dark">
+	<div class="container">
+		<a class="navbar-brand" href="https://docs.rainmeter.net"><img src="/img/logo_nav.png" alt=""></a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse justify-content-end" id="mainNavigation">
+			<ul class="navbar-nav order-12">
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//www.rainmeter.net/">Home</a>
+                		</li>
+					
+                
+					
+						<li class="nav-item ">
+                    		<a class="nav-link" href="../../index.html">Documentation</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//rainmeter.net/discover">Discover</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//forum.rainmeter.net/">Community</a>
+                		</li>
+					
+                
+                <div class="dropdown-divider"></div>
+		</div>
+	</div>
+</nav>
+
+<div id="content">
+    <div id="nav-button" class="docs-nav-button">
+      <div class="container d-flex flex-row align-items-center">
+      <svg onclick="openNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <a onclick="openNavMenu()">Open navigation</a>
+  </div>
+</div>
+
+  <div class="container">
+    <div class="row">
+
+      <!-- Sidenav -->
+      <div id="menu" class="docs-nav col-12 col-lg-3">
+        
+
+<h4 id="category"><a href="/tips">Tips &amp; Tricks</a></h4>
+<svg class="closeButton" onclick="closeNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<form id="search-form" method="get" action="https://www.google.com/search">
+  <input name="sitesearch" value="docs.rainmeter.net" type="hidden">
+  <input class="form-control" id="search" name="q" maxlength="255" size="16" placeholder="Search" type="text">
+</form>
+<hr />
+<nav id="sidenav" class="sidenav">
+<h4>Contents</h4>
+	<ul class="docs-nav-block">
+	<li><a class="active" href="/tips/#BeyondTheBasics">Beyond the Basics</a>
+	<li><a href="/tips/#GoodToKnow">Good To Know</a>
+	<li><a href="/tips/#GettingThingsDone">Getting Things Done</a>
+	</ul>
+
+	<h4>More</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/manual/">Manual</a>
+	<li><a href="/snippets/">Snippets</a>
+	<li><a href="/developers/">Developers</a>
+	<li><a href="/history/">Version History</a>
+	</ul>
+
+</nav>
+
+      </div>
+
+      <!-- Content -->
+      <div class="docs-content col-12 col-lg-9">
+        <h1 class="page-title">WebParser: How UpdateRate Works</h1>
+        <hr />
+        <!-- Include content and Replace "!" in every url with correct path -->
+        <p>This guide is intended to explain how WebParser measures are controlled. How often the measure actually accesses and parses the remote resource defined in the <code>URL</code> option, and how you control how often and when this happens.</p>
+
+<p><b>Let's start by defining how a WebParser parent measure operates:</b></p>
+
+<ul>
+<li>A Webparser parent measure always has an <a href="https://docs.rainmeter.net/manual/measures/webparser/#UpdateRate">UpdateRate</a> option on it. If you don't set one explicitly,  it will default to 600. More on this in a second.</li>
+<li>When a WebParser parent measure is first loaded, or when the skin is refreshed. The plugin sets up an internal counter, let's just call it UpdateCounter. The name isn't important, it's not visible to the skin. The value of UpdateCounter is initialized to zero. This counter is a loop from zero to the value of the <code>UpdateRate</code> option on the measure.</li>
+<li>On each update of the measure, the plugin will evaluate the value of UpdateCounter, and if it is zero, it will access and parse the remote resource. This means it will always do so when the skin is first loaded or when refreshed.</li>
+<li>The plugin will then increment the value of UpdateCounter by one.</li>
+<li>If the value of the internal UpdateCounter is equal to the value set for <code>UpdateRate</code> on the measure, then the UpdateCounter loop resets to zero, and the cycle begins again. The remote resource is accessed and parsed, and the UpdateCounter is incremented by one.</li>
+</ul>
+
+<p>So in short, a WebParser parent measure does its work, accesses and parses the remote resource, every <code>UpdateRate</code> times that the measure is updated. By default, a WebParser parent measure will be updated on each update of the skin, controlled by the <a href="https://docs.rainmeter.net/manual/skins/rainmeter-section/#Update">Update</a> option in the [Rainmeter] section.</p>
+
+<p>This is why, with a default skin <code>Update</code> of 1000 milliseconds, and a default <code>UpdateRate</code> of 600 on the measure, a WebParser parent measure will access the remote resource every 10 minutes.</p>
+
+<p><code>1000 milliseconds equals 1 second, times 600 equals 600 seconds, which equals 10 minutes.</code></p>
+
+<p><b>Why do you NEVER use UpdateDivider on a WebParser measure?</b></p>
+
+<p>Normally, you would use the <a href="https://docs.rainmeter.net/manual/measures/general-options/#UpdateDivider">UpdateDivider</a> option to control how ofen a measure is updated. This is not recommended on WebParser measures, as it is far better to entirely control the rate that WebParser does its work with <code>UpdateRate</code>. Allow the WebParser parent measure to update, and thus increment the internal UpdateCounter on each skin <code>Update</code>, and set <code>UpdateRate</code> as needed to control things. With a skin <code>Update</code> of 1000, it's pretty easy. <code>UpdateRate</code> simply equates to "how many seconds?".</p>
+
+<p>All that using <code>UpdateDivider</code> will do is make it far more complex and confusing to get the timing right, and it is just not needed. This is because like all measures, WebParser will obey <code>UpdateDivider</code>, which makes the formula:</p>
+
+<p><code>Update times UpdateDivider times UpdateRate</code></p>
+
+<p><code>UpdateDivider</code> defaults to "1", and that is how it should always be left on WebParser measures. Multiplying a value by "1" has no impact. That is what you want.</p>
+
+<p><b>Why do you NEVER use an !UpdateMeasure bang on a WebParser measure?</b></p>
+
+<p>Normally, you would use an <a href="https://docs.rainmeter.net/manual/bangs/#UpdateMeasure">!UpdateMeasure</a> bang in an action to force a measure to update NOW, rather than waiting for the next normal update. This is not effective on WebParser measures, and should never be used.</p>
+
+<p>While using <code>!UpdateMeasure</code> will cause an immediate update of the measure, all that will do in the WebParser plugin is increment our internal UpdateCounter loop by one. Depending on where the plugin currently is in the  internal UpdateCounter loop, this might be from say 458 to 459, and you are only one measure update closer to your goal. If <ocde>UpdateRate</code> is the default 600, You still have 141 measure updates to go before anything happens.</p>
+
+<p><code>!UpdateMeasure</code> will not cause the plugin to immediately access the remote resource, and should never be used on WebParser measures.</p>
+
+<p><b>So how DO you update the measure immediately?</b></p>
+
+<p>You can do so, by using the <a href="https://docs.rainmeter.net/manual/bangs/#CommandMeasure">!CommandMeasure</a> bang to send an <a href="https://docs.rainmeter.net/manual/measures/webparser/#CommandMeasureUpdate">Update</a> command to the WebParser parent measure.</p>
+
+<p>Example: <code>LeftMouseUpAction=[!CommandMeasure MeasureName "Update"]</code></p>
+
+<p>What an action like <code>[!CommandMeasure MeasureName "Update"]</code> does is very simple. It immediately sets the value of our internal UpdateCounter in the plugin to zero. That will cause the plugin to immediately access and parse the remote resource, and start the cycle over. This is the only effective way to do this.</p>
+
+<p>&nbsp;</p>
+
+<p><b>Note:</b> All of this is about controlling WebParser "parent" measures. Never use ANY of this on WebParser "child" measures, as they are entirely controlled by their "parent". When the parent WebParser measure completes accessing and parsing the information you want, it will automatically "force" the values on each of its child measures, based on the StringIndex option on them. Child measures take no independent action, and are simply set by their parent measure. Only use <code>UpdateRate</code> and / or <code>[!CommandMeasure MeasureName "Update"]</code> on parent WebParser measures.</p>
+ 
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Include Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-6">© 2026 Rainmeter Team</div>
+      <div class="col-6 text-right"><button id="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> <span>Light theme</span></button></div>
+    </div>
+  </div>
+</footer>
+
+
+
+	<!-- Javascript files  -->
+	<script src="/js/main.js?v=0b0053a2"></script>
+	<script src="/js/jquery-3.2.1.slim.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	<script src="/js/ahk-sliding-panel.js"></script>
+	<script src="/js/jquery.fancybox.min.js"></script>
+
+	<!-- Script for the slideout menu on mobile -->
+	<script>
+		// set slideout menu variables
+		var docsnav = new ahk_slideout({
+		  id: "menu",
+		  side: "left",
+		  width: "18rem",
+		  touch_boundary: "50",
+		  slide_time: "0.2"
+		})
+
+		// function to toggle menu
+		function openNavMenu() {
+		  docsnav.openMenu()
+		}
+		// function to close menu
+		function closeNavMenu() {
+		  docsnav.closeMenu()
+		}
+
+		// when scrolling below 90, add sticky class to nav-button
+		$(function() {
+		  var header = $("#nav-button");
+		  $(window).scroll(function() {
+		    var scroll = $(window).scrollTop();
+		    if (scroll >= 90) {
+		      header.addClass("sticky");
+		    } else {
+		      header.removeClass("sticky");
+		    }
+		  });
+		});
+	</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a454b2e3bf85f7c5',t:'MTc5MTEyMjI3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

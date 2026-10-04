@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Meta tags for proper character encoding and social media handling  -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.9, maximum-scale=0.9">
+	<meta itemprop="name" content="Shape meter - Rainmeter Docs">
+	<meta property="og:title" content="Shape meter - Rainmeter Docs">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://www.rainmeter.net">
+	<meta property="og:image" content="https://www.rainmeter.net/img/media_image.png">
+	<meta property="og:site_name" content="Rainmeter">
+	<meta property="og:locale" content="en_US" />
+
+	<!-- Page title  -->
+	<title>Shape meter - Rainmeter Documentation</title>
+
+	<script>
+		(function() {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('theme');
+			} catch (e) {
+			}
+			if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				theme = 'dark';
+			}
+			if (theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				document.documentElement.style.colorScheme = theme;
+			}
+		})();
+	</script>
+
+	<!-- Files need to be local for offline version of documentations -->
+	<link rel="stylesheet" href="/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/css/rainmeter.css?v=24f3b22e">
+	<link rel="stylesheet" href="/css/jquery.fancybox.min.css">
+	<link rel="stylesheet" href="/css/fontawesome.css">
+	<link rel="stylesheet" href="/css/solid.css">
+
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600">
+	<link href="https://fonts.googleapis.com/css?family=Nunito:400,700" rel="stylesheet">
+
+	<!-- Site icon -->
+	<link rel="shortcut icon" href="https://www.rainmeter.net/favicon.ico?v=2">
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body><a href="https://docs.rainmeter.net/cdn-cgi/content?id=9c3GtP_E4lmmomFQsCEAZt7cS0ymSZmHkeMttA90d_E-1791121968.0274873-1.2.1.1-PTik_B1Bs8XFlmIGxB8tQrfu.Koy6.YhrZu_foUEft8fyr7KTOWFrHVV907FR3MS" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+
+  <!-- Get current path and set it as a variable -->
+
+
+<!-- Include navbar -->
+<nav id="navbar" class="navbar navbar-expand-lg navbar-dark">
+	<div class="container">
+		<a class="navbar-brand" href="https://docs.rainmeter.net"><img src="/img/logo_nav.png" alt=""></a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse justify-content-end" id="mainNavigation">
+			<ul class="navbar-nav order-12">
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//www.rainmeter.net/">Home</a>
+                		</li>
+					
+                
+					
+						<li class="nav-item ">
+                    		<a class="nav-link" href="../../../index.html">Documentation</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//rainmeter.net/discover">Discover</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//forum.rainmeter.net/">Community</a>
+                		</li>
+					
+                
+                <div class="dropdown-divider"></div>
+		</div>
+	</div>
+</nav>
+
+<div id="content">
+    <div id="nav-button" class="docs-nav-button">
+      <div class="container d-flex flex-row align-items-center">
+      <svg onclick="openNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <a onclick="openNavMenu()">Open navigation</a>
+  </div>
+</div>
+
+  <div class="container">
+    <div class="row">
+
+      <!-- Sidenav -->
+      <div id="menu" class="docs-nav col-12 col-lg-3">
+        
+
+<h4 id="category"><a href="/manual">Manual</a></h4>
+<svg class="closeButton" onclick="closeNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<form id="search-form" method="get" action="https://www.google.com/search">
+  <input name="sitesearch" value="docs.rainmeter.net" type="hidden">
+  <input class="form-control" id="search" name="q" maxlength="255" size="16" placeholder="Search" type="text">
+</form>
+<hr />
+<nav id="sidenav" class="sidenav">
+<h4>Contents</h4>
+<ul class="docs-nav-block">
+	<li><a href="/manual/getting-started/">Getting Started</a>
+		<ul>
+		<li><a href="/manual/getting-started/setting-up/">Setting Up</a>
+		<li><a href="/manual/getting-started/using-rainmeter/">Using Rainmeter</a>
+		<li><a href="/manual/getting-started/customizing/">Customizing</a>
+		<li><a href="/manual/getting-started/creating-skins/">Creating Skins</a>
+		<li><a href="/manual/getting-started/skin-anatomy/">Anatomy of a Skin</a>
+		<li><a href="/manual/getting-started/basic-tutorials/">Basic Tutorials</a>
+			<ul>
+			<li><a href="/manual/getting-started/basic-tutorials/launcher/">Launcher</a>
+			<li><a href="/manual/getting-started/basic-tutorials/clock/">Clock</a>
+			<li><a href="/manual/getting-started/basic-tutorials/system/">System</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/installing-rainmeter/">Installing Rainmeter</a>
+			<ul>
+			<li><a href="/manual/installing-rainmeter/auto-update/">Auto Update</a>
+			</ul>
+	<li><a href="/manual/user-interface/">User Interface</a>
+		<ul>
+		<li><a href="/manual/user-interface/manage/">Manage</a>
+	<ul>
+		<li><a href="/manual/user-interface/manage/new-skin">New Skin</a>
+	</ul>
+		<li><a href="/manual/user-interface/about/">About</a>
+		<li><a href="/manual/user-interface/context-menus/">Context Menus</a>
+		</ul>
+	<li><a href="/manual/installing-skins/">Installing Skins</a>
+	<li><a href="/manual/arranging-skins/">Arranging Skins</a>
+	<li><a href="/manual/distributing-skins/">Distributing Skins</a>
+	<ul>
+		<li><a href="/manual/distributing-skins/vault-folder/">@Vault Folder</a>
+	</ul>
+	</ul>
+
+	<h4>Reference</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/manual/settings/">Settings</a>
+		<ul>
+		<li><a href="/manual/settings/rainmeter-section/">[Rainmeter] Section</a>
+		<li><a href="/manual/settings/traymeasure-section/">[TrayMeasure] Section</a>
+		<li><a href="/manual/settings/skin-sections/">[Skin] Sections</a>
+		</ul>
+	<li><a href="/manual/skins/">Skins</a>
+		<ul>
+		<li><a href="/manual/skins/option-types/">Option Types</a>
+		<li><a href="/manual/skins/rainmeter-section/">[Rainmeter] Section</a>
+			<ul>
+				<li><a href="/manual/skins/rainmeter-section/defaults/">Default Settings
+			</ul>
+		<li><a href="/manual/skins/metadata-section/">[Metadata] Section</a>
+		<li><a href="/manual/skins/include-option/">@Include Options</a>
+		<li><a href="/manual/skins/resources-folder/">@Resources Folder</a>
+		</ul>
+	<li><a href="/manual/meters/">Meters</a>
+		<ul>
+		<li><a href="/manual/meters/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/meters/general-options/image-options/">Image Options</a>
+			<li><a href="/manual/meters/general-options/meterstyles/">MeterStyles</a>
+			<li><a href="/manual/meters/general-options/tooltips/">Tooltips</a>
+			<li><a href="/manual/meters/general-options/container/">Container</a>
+			</ul>
+		<li><a href="/manual/meters/bar/">Bar</a>
+		<li><a href="/manual/meters/bitmap/">Bitmap</a>
+		<li><a href="/manual/meters/button/">Button</a>
+		<li><a href="/manual/meters/histogram/">Histogram</a>
+		<li><a href="/manual/meters/image/">Image</a>
+		<li><a href="/manual/meters/line/">Line</a>
+		<li><a href="/manual/meters/rotator/">Rotator</a>
+		<li><a href="/manual/meters/roundline/">Roundline</a>
+		<li><a href="/manual/meters/shape/">Shape</a>
+		<li><a href="/manual/meters/string/">String</a>
+	<ul>
+		<li><a href="/manual/meters/string/inline/">Inline Options</a>
+	</ul>
+		</ul>
+	<li><a href="/manual/measures/">Measures</a>
+		<ul>
+		<li><a href="/manual/measures/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/measures/general-options/ifactions/">IfActions</a>
+			<li><a href="/manual/measures/general-options/ifconditions/">IfConditions</a>
+			<li><a href="/manual/measures/general-options/ifmatchactions/">IfMatchActions</a>
+			<li><a href="/manual/measures/general-options/substitute/">Substitute</a>
+			</ul>
+		<li><a href="/manual/measures/calc/">Calc</a>
+		<li><a href="/manual/measures/cpu/">CPU</a>
+		<li><a href="/manual/measures/freediskspace/">FreeDiskSpace</a>
+		<li><a href="/manual/measures/loop/">Loop</a>
+		<li><a href="/manual/measures/mediakey/">MediaKey</a>
+		<li><a href="/manual/measures/memory/">Memory</a>
+		<li><a href="/manual/measures/net/">Net</a>
+		<li><a href="/manual/measures/nowplaying/">NowPlaying</a>
+		<li><a href="/manual/measures/plugin/">Plugin</a>
+		<li><a href="/manual/measures/process/">Process</a>
+		<li><a href="/manual/measures/recyclemanager/">RecycleManager</a>
+		<li><a href="/manual/measures/registry/">Registry</a>
+		<li><a href="/manual/measures/script/">Script</a>
+		<li><a href="/manual/measures/string/">String</a>
+		<li><a href="/manual/measures/sysinfo/">SysInfo</a>
+		<li><a href="/manual/measures/time/">Time</a>
+		<li><a href="/manual/measures/uptime/">Uptime</a>
+		<li><a href="/manual/measures/webparser/">WebParser</a>
+		<li><a href="/manual/measures/wifistatus/">WiFiStatus</a>
+		</ul>
+	<li><a href="/manual/plugins/">Plugins</a>
+		<ul>
+		<li><a href="/manual/plugins/actiontimer/">ActionTimer</a>
+		<li><a href="/manual/plugins/audiolevel/">AudioLevel</a>
+		<li><a href="/manual/plugins/coretemp/">CoreTemp</a>
+		<li><a href="/manual/plugins/fileview/">FileView</a>
+		<li><a href="/manual/plugins/folderinfo/">FolderInfo</a>
+		<li><a href="/manual/plugins/inputtext/">InputText</a>
+		<li><a href="/manual/plugins/ping/">Ping</a>
+		<li><a href="/manual/plugins/power/">Power</a>
+		<li><a href="/manual/plugins/quote/">Quote</a>
+		<li><a href="/manual/plugins/resmon/">ResMon</a>
+		<li><a href="/manual/plugins/runcommand/">RunCommand</a>
+		<li><a href="/manual/plugins/speedfan/">SpeedFan</a>
+		<li><a href="/manual/plugins/usagemonitor/">UsageMonitor</a>
+		<li><a href="/manual/plugins/win7audio/">Win7Audio</a>
+		<li><a href="/manual/plugins/windowmessage/">WindowMessage</a>
+		<li><a href="/manual/plugins/deprecated/">Deprecated Plugins</a>
+			<ul>
+			<li><a href="/manual/plugins/deprecated/advancedcpu/">AdvancedCPU</a>
+			<li><a href="/manual/plugins/deprecated/itunes/">iTunes</a>
+			<li><a href="/manual/plugins/deprecated/perfmon/">PerfMon</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/bangs/">Bangs</a>
+	<li><a href="/manual/formulas/">Formulas</a>
+	<li><a href="/manual/variables/">Variables</a>
+		<ul>
+		<li><a href="/manual/variables/nesting-variables/">Nesting Variables</a>
+		<li><a href="/manual/variables/built-in-variables/">Built-In Variables</a>
+		<li><a href="/manual/variables/section-variables/">Section Variables</a>
+		<li><a href="/manual/variables/character-variables/">Character Variables</a>
+		<li><a href="/manual/variables/mouse-variables/">Mouse Variables</a>
+		</ul>
+	<li><a href="/manual/groups/">Groups</a>
+	<li><a href="/manual/mouse-actions/">Mouse Actions</a>
+	<li><a href="/manual/lua-scripting/">Lua Scripting</a>
+		<ul>
+		<li><a href="/manual/lua-scripting/inline-lua/">Inline Lua</a>
+		</ul>
+	</ul>
+
+	<h4>More</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/tips/">Tips &amp; Tricks</a>
+	<li><a href="/snippets/">Snippets</a>
+	<li><a href="/developers/">Developers</a>
+	<li><a href="/history/">Version History</a>
+	</ul>
+
+</nav>
+
+      </div>
+
+      <!-- Content -->
+      <div class="docs-content col-12 col-lg-9">
+        <h1 class="page-title">Shape meter</h1>
+        <hr />
+        <!-- Include content and Replace "!" in every url with correct path -->
+        <p><code>Meter=Shape</code> is used to create one or more <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Vector_graphics">vector graphic</a> shapes.</p>
+
+<div class="exampleprev">
+	<a href="/manual/img/shapes/Shapes.png" data-fancybox><img src="/manual/img/shapes/Shapes.png"></a>
+	<p>An example skin demonstrating different shape types made using the Shape meter.</p>
+</div>
+
+<h2>Quick Jump</h2>
+<table id="quickjump">
+<tr>
+<td><a href="#Shape">Shape Option</a></td>
+<td><a href="#Combine">Combining Shapes</a></td>
+<td><a href="#DefiningGradients">Defining Gradients</a></td>
+</tr><tr>
+<td><a href="#Rectangle">Rectangle Shape</a></td>
+<td><a href="#AttributeModifiers">Attribute Modifiers</a></td>
+<td><a href="#MouseDetection">Mouse Detection</a></td>
+</tr><tr>
+<td><a href="#Ellipse">Ellipse Shape</a></td>
+<td><a href="#TransformModifiers">Transform Modifiers</a></td>
+<td><a href="#DeviceIndependentPixels">Device Independent Pixels</a></td>
+</tr><tr>
+<td><a href="#Line">Line Shape</a></td>
+<td><a href="#ExtendModifier">Extend Modifier</a></td>
+<td><a href="#Examples">Examples for Download</a></td>
+</tr><tr>
+<td><a href="#Arc">Arc Shape</a></td>
+</tr><tr>
+<td><a href="#Curve">Curve Shape</a></td>
+</tr><tr>
+<td><a href="#Path">Path Shape</a></td>
+</tr><tr>
+</table>
+
+<h2 id="Overview">Overview</h2>
+
+<p>The meter will consist of one or more Shape...Shape2...Shape<em>N</em> objects.</p>
+
+<p>You first define the type of <a href="#Shape">Shape</a>, the relative starting position in the meter, and required and optional shape definition parameters.</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">50</span></span><br></pre></td></tr></table></figure>
+<p>In this example we are saying "Create a rectangle, starting at an X of 0 and a Y of 0 relative to the meter, with a width of 100, and a height of 50." This is the most basic example of the meter, and will create a 100 X 50 rectangle with a default white fill color and a default 1 pixel black drawing stroke.</p>
+
+<p>You can then add <a href="#AttributeModifiers">Attribute</a> and <a href="#TransformModifiers">Transform</a> modifiers to each shape, which can control things like Fill Color, StrokeWidth, Rotate, Scale, and much more.</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">50</span> | Fill Color <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span></span><br></pre></td></tr></table></figure>
+<p>Modifiers are added on the Shape<em>N</em> option by defining them separated by the pipe <code>|</code> character. All modifiers are optional, and they can be in any order in the option, after the shape definition. This example adds "Use a solid black fill color in the shape, change the width of the drawing stroke to 4 pixels, and color the stroke white."</p>
+
+<p>Shapes in a meter can also be <a href="#Combine">Combined</a>, which will allow you to merge two or more separate shapes in a variety of ways.</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShapes]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">4</span>,<span class="number">4</span>,<span class="number">110</span>,<span class="number">110</span>,<span class="number">55</span></span><br><span class="line"><span class="attr">Shape2</span>=Rectangle <span class="number">54</span>,<span class="number">54</span>,<span class="number">80</span>,<span class="number">80</span>,<span class="number">10</span></span><br><span class="line"><span class="attr">Shape3</span>=Combine Shape | Union Shape2</span><br></pre></td></tr></table></figure>
+
+<p>If you have more than one shape defined in the meter, you may want them to share some or all modifiers, rather than repeating them in each Shape<em>N</em> option. This is done with the <a href="#ExtendModifier">Extend</a> modifier. The way this works is that you use the keyword Extend, followed by one or more named identifiers. Then you add that named identifier as a separate option on the meter, and in it put any modifiers you want to share.</p>
+
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShapes]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">50</span> | Extend MySharedModifiers</span><br><span class="line"><span class="attr">Shape2</span>=Rectangle <span class="number">20</span>,<span class="number">10</span>,<span class="number">50</span>,<span class="number">50</span> | Extend MySharedModifiers</span><br><span class="line"><span class="attr">MySharedModifiers</span>=Fill Color <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span></span><br></pre></td></tr></table></figure>
+
+<p><b>Note:</b> The <code>EndX</code> and <code>EndY</code> parameters in the Line shape, as well as in the Arc and Curve shapes, and the <code>LineTo</code>, <code>ArcTo</code>, <code>CurveTo</code> parameters in the Path shape, are <em>not inclusive</em>. The line is drawn <em>up to</em> the points defined by EndX and EndY. A line drawn from pixel 0 to pixel 100 will be drawn on pixels 0 through 99, and be 100 pixels in length.</p>
+
+<h2>Options</h2>
+<dl>
+	<dt>General meter options</dt>
+	<dd>
+		<p>All <a href="/manual/meters/general-options/">general meter options</a> are valid.</p>
+	</dd>
+
+	<dt id="Shape"><code>Shape, Shape2, Shape3...</code></dt>
+	<dd>
+		<p>This is the only Shape meter specific option used. It will define the <b><a href="#ShapeTypes">Shape Type</a></b> and its definition parameters, and any <b><a href="#AttributeModifiers">Attribute</a></b> and <b><a href="#TransformModifiers">Transform</a></b> modifiers for the shape(s) to be drawn.</p>
+
+		<p>There can be from one to a reasonably unlimited number of shapes in a single Shape meter. Multiple shapes are <b>drawn in the numerical order of the Shape<em>N</em></b>, so in the case of overlap, higher numbered shapes will be drawn on top / in front of lower numbered shapes.</p>
+
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShapes]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">25</span>,<span class="number">25</span>,<span class="number">100</span>,<span class="number">100</span> | Fill Color <span class="number">106</span>,<span class="number">159</span>,<span class="number">212</span>,<span class="number">255</span> | Rotate <span class="number">45</span></span><br><span class="line"><span class="attr">Shape2</span>=Rectangle <span class="number">50</span>,<span class="number">50</span>,<span class="number">50</span>,<span class="number">50</span>,<span class="number">25</span> | Fill Color <span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span></span><br></pre></td></tr></table></figure>
+
+		<h2 id="ShapeTypes">Shape Types</h2>
+
+		<dl>
+			<dt id="Rectangle" class="sub"><code>Rectangle</code> <small>Parameters: <code><b>X, Y, Width, Height</b><em>,  RadiusX, RadiusY</em></code></small></dt>
+			<dd>
+				<p>A closed rectangle or rounded rectangle.</p>
+
+				<p><b>Parameters:</b><br/>
+					<ul>
+						<li><code>X</code> (required): X coordinate of the shape relative to the meter.</li>
+						<li><code>Y</code> (required): Y coordinate of the shape relative to the meter.</li>
+						<li><code>Width</code> (required): Width of the shape.</li>
+						<li><code>Height</code> (required): Height of the shape.</li>
+						<li><code>RadiusX</code> (optional): Radius of the corners of rounded rectangles. If used with the optional ' RadiusY', this will represent the radius on the X-axis.</li>
+						<li><code>RadiusY</code> (optional): Y-Axis radius of the corners of rounded rectangles.</li>
+					</ul>
+				</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Rectangle 0,0,100,50</code><br/>
+					<code>Shape=Rectangle 0,0,100,50,10</code><br/>
+					<code>Shape=Rectangle 0,0,100,50,20,5</code>
+				</p>
+			</dd>
+
+			<dt id="Ellipse" class="sub"><code>Ellipse</code> <small>Parameters: <code><b>CenterX, CenterY, RadiusX, <em>RadiusY</em></b></code></small></dt>
+			<dd>
+				<p>A closed circle or oval.</p>
+
+				<p><b>Parameters:</b><br/>
+					<ul>
+						<li><code>CenterX</code> (required): X coordinate of the center of the ellipse.</li>
+						<li><code>CenterY</code> (required): Y coordinate of the center of the ellipse.</li>
+						<li><code>RadiusX</code> (required): Radius of the ellipse. If used with the optional 'RadiusY', this will represent the radius on the X-axis.</li>
+						<li><code>RadiusY</code> (optional): Radius of the ellipse on the Y-axis.</li>
+					</ul>
+				</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Ellipse 50,50,50</code><br/>
+					<code>Shape=Ellipse 50,50,50,25</code>
+				</p>
+
+				<p><b>Note on Ellipse:</b><br/>
+				The shape is drawn centered on the position defined by CenterX and CenterY. In a sense, it draws from the center out. Be sure that CenterX and CenterY, or the X and Y on the meter, leave enough room in the overall skin to not truncate the shape at the left and top.</p>
+			</dd>
+
+			<dt id="Line" class="sub"><code>Line</code> <small>Parameters: <code><b>StartX, StartY, EndX, EndY</b></code></small></dt>
+			<dd>
+				<p>An open line between two points.</p>
+
+				<p><b>Parameters:</b><br/>
+					<ul>
+						<li><code>StartX</code> (required): X coordinate of the starting point of the line.</li>
+						<li><code>StartY</code> (required): Y coordinate of the starting point of the line.</li>
+						<li><code>EndX</code> (required):  X coordinate of the ending point of the line.</li>
+						<li><code>EndY</code> (required): Y coordinate of the ending point of the line.</li>
+					</ul>
+				</p>
+				
+				<p><b>Example:</b><br/>
+					<code>Shape=Line 50,50,200,200</code><br/>
+				</p>
+			</dd>
+
+			<dt id="Arc" class="sub"><code>Arc</code> <small>Parameters: (See below)</small></dt>
+			<dd>
+				<p>An open arc between two points.<br/>
+				See our <b>live</b> <a href="/manual/meters/shape/arc.html">interactive arc example</a>.</p>
+
+				<p><b>Parameters:</b><br/>
+					<ul>
+						<li><code>StartX</code> (required): X coordinate of the starting point of the arc.</li>
+						<li><code>StartY</code> (required): Y coordinate of the starting point of the arc.</li>
+						<li><code>EndX</code> (required):  X coordinate of the ending point of the arc.</li>
+						<li><code>EndY</code> (required): Y coordinate of the ending point of the arc.</li>
+						<li><code>RadiusX</code> (optional): X radius of the arc.</li>
+						<li><code>RadiusY</code> (optional):  Y radius of the arc.</li>
+						<li><code>RotationAngle</code> (optional): Positive or negative angle of rotation. (see note)</li>
+						<li><code>SweepDirection</code> (optional): Clockwise (0 - default) or counter-clockwise (1) direction.</li>
+						<li><code>ArcSize</code> (optional): Use small (0 - default) or large (1) arc size. (see note)</li>
+						<li><code>ShapeEnding</code> (optional): Leave the shape open (0 - default) or automatically close (1) the shape.</li>
+					</ul>
+				</p>
+
+				<p>The first 4 parameters are required. The rest are optional, but in order. When you use an optional parameter later in the order, an asterisk <code>*</code> symbol can be used to indicate "default" in earlier optional parameters.</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Arc 3,200,203,200,100,100,0,0,0,0 | StrokeWidth 6</code><br/>
+					<code>Shape=Arc 10,15,110,215,*,*,*,*,*,1 | StrokeWidth 6</code>
+				</p>
+
+				<b>Notes on Arc:</b><br/>
+
+				<b>SweepDirection</b> : <b>ArcSize</b> : An arc describes two virtual ellipses intersecting the starting and ending points. One clockwise and one counter-clockwise. If the radius of the arc is greater than 1/2 the distance between the starting and ending points, this actually creates 4 possible arcs:
+				<ul>
+					<li>Clockwise small</li>
+					<li>Clockwise large</li>
+					<li>Counter-clockwise small</li>
+					<li>Counter-clockwise large</li>
+				</ul>
+
+				<b>RotationAngle</b> : If the RadiusX and RadiusY of the arc are not the same, then RotationAngle will rotate the two ellipses around a center point defined on and at 1/2 the distance between the starting and ending points.<br/><br/>
+
+				<b>ShapeEnding</b> : An Arc shape can be either be left open, or have a line segment automatically drawn to close the shape. The impact this has on Attribute Modifiers is:
+				<ul>
+				<li>Fill attributes default to transparent on an open shape.</li>
+				<li>Fill attributes can be defined for either an open or closed shape.</li>
+				<li>StrokeWidth is used on the entirety of a closed shape.</li>
+				<li>StrokeWidth is only used on the "drawn" part of the arc on an open shape.</li>
+				</ul>
+			</dd>
+
+			<dt id="Curve" class="sub"><code>Curve</code> <small>Parameters: (See below)</small></dt>
+			<dd>
+				<p>An open quadratic or cubic bézier curve between two points.</p>
+
+				<p>A quadratic bézier curve is a single set of X and Y control points between starting and ending points.<br/>
+				See our <b>live</b> <a href="/manual/meters/shape/quadratic.html">interactive quadratic curve example</a>.</p>
+				<p>A cubic bézier curve is two sets of X and Y control points between starting and ending points.<br/>
+				See our <b>live</b> <a href="/manual/meters/shape/cubic.html">interactive cubic curve example</a>.</p>
+
+				<p><b>Parameters:</b><br/>
+					<ul>
+						<li><code>StartX</code> (required): X coordinate of the starting point of the curve.</li>
+						<li><code>StartY</code> (required): Y coordinate of the starting point of the curve.</li>
+						<li><code>EndX</code> (required):  X coordinate of the ending point of the curve.</li>
+						<li><code>EndY</code> (required): Y coordinate of the ending point of the curve.</li>
+						<li><code>ControlX1</code> (required): X coordinate of the first control point.<br/>
+						<code>ControlY1</code> (required): Y coordinate of the first control point.</li>
+						<li><code>ControlX2</code> (optional): X coordinate of the second control point.<br/>
+						<code>ControlY2</code> (optional): Y coordinate of the second control point.</li>
+						<li><code>ShapeEnding</code> (optional): Leave the shape open (0 - default) or automatically close (1) the shape.</li>
+					</ul>
+				</p>
+
+				<p>If either 1 or 2 sets of control points are defined, the next parameter will be <code>ShapeEnding</code>.</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Curve 5,5,200,225,400,115,0 | StrokeWidth 6</code><br/>
+					<code>Shape=Curve 5,5,215,120,40,130,160,15,0 | StrokeWidth 6</code>
+				</p>
+
+				<b>Notes on Curve:</b><br/>
+				A Curve shape can be either be left open, or have a line segment automatically drawn to close the shape. The impact this has on Attribute Modifiers is:
+				<ul>
+				<li>Fill attributes default to transparent on an open shape.</li>
+				<li>Fill attributes can be defined for either an open or closed shape.</li>
+				<li>StrokeWidth is used on the entirety of a closed shape.</li>
+				<li>StrokeWidth is only used on the "drawn" part of the curve on an open shape.</li>
+				</ul>
+			</dd>
+
+			<dt id="Path" class="sub"><code>Path</code> <small>Parameters: (See below)</small></dt>
+			<dd>
+				<p>Drawing segments that define the outline of a shape, consisting of a starting point followed by a series of one or more lines, arcs or curves. Each segment will automatically start where the previous one ends. The final result may produce an open or closed shape.</p>
+
+				<p>Path definitions <b>must</b> be defined in a separate named option, which you then reference immediately following the Path type on the Shape(<em>N</em>) option line. For example: <code>Shape=Path MyPath | StrokeColor 0,255,0,255</code>.</p>
+
+				<p><b>Parameters:</b></p>
+
+					<ul>
+						<li><code>StartX</code> (required): X coordinate of the starting point of the path.</li>
+						<li><code>StartY</code> (required): Y coordinate of the starting point of the path.<br/><br/>
+						Followed by a pipe <code>|</code> character, and at least one, up to unlimited, of the following segment types, separated by a pipe <code>|</code> character.<br/><br/></li>
+						<li><code>LineTo</code> (optional): Uses the same parameters as the <b><a href="#Line">Line</a></b> shape, less the X and Y starting coordinates and any ShapeEnding value. Segments will automatically know their starting points, and must always in and of themselves be an open shape.</li>
+						<li><code>ArcTo</code> (optional): Uses the same parameters as the <b><a href="#Arc">Arc</a></b> shape, less the X and Y starting coordinates and any ShapeEnding value. Segments will automatically know their starting points, and must always in and of themselves be an open shape.</li>
+						<li><code>CurveTo</code> (optional): Uses the same parameters as the <b><a href="#Curve">Curve</a></b> shape, less the X and Y starting coordinates and any ShapeEnding value. Segments will automatically know their starting points, and must always in and of themselves be an open shape.<br/><br/></li>
+						In addition, there are two optional segment control commands that can be used at any point in the path definition. These will alter the behavior of the path's stroke from the default values or any defined in the Shape(<em>N</em>) definition, from the point they are used in the path until they are altered again or the end of the path is reached:<br/><br/>
+						<li><code>SetRoundJoin</code> (optional): Values are 0 or 1. Use the default or defined value of <a href="#StrokeLineJoin">StrokeLineJoin</a> (0 - default) to join angled segments, or use a Round (1) line join.</li>
+						<li><code>SetNoStroke</code> (optional): Values are 0 or 1. Use the default or defined value of <a href="#StrokeWidth">StrokeWidth</a> (0 - default), or do not draw a stroke (1). This does not change the open or closed nature of the shape.<br/><br/></li>
+						Following the final definition of the path segments, a path may or may not create a fully enclosed shape. This can be controlled by optionally ending the definition with:<br/><br/>
+						<li><code>ClosePath</code> (optional): Values are 0 or 1. Leave the shape open (0 - default) or automatically close (1) the shape by drawing a line segment from the final ending point to the starting point.</li>	
+					</ul>
+
+				<p><b>Examples:</b></p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape1]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">Y</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">Shape</span>=Path MyPath | StrokeWidth <span class="number">2</span> | Stroke Color <span class="number">41</span>,<span class="number">4</span>,<span class="number">2</span>,<span class="number">255</span> | Fill Color <span class="number">87</span>,<span class="number">149</span>,<span class="number">212</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">MyPath</span>=<span class="number">20</span>,<span class="number">0</span> | LineTo <span class="number">150</span>,<span class="number">0</span> | LineTo <span class="number">170</span>,<span class="number">20</span> | LineTo <span class="number">170</span>,<span class="number">60</span> | LineTo <span class="number">150</span>,<span class="number">80</span> | LineTo <span class="number">20</span>,<span class="number">80</span> | LineTo <span class="number">0</span>,<span class="number">60</span> | LineTo <span class="number">0</span>,<span class="number">20</span> | ClosePath <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterShape2]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">Y</span>=<span class="number">15</span>R</span><br><span class="line"><span class="attr">Shape</span>=Path MyPath | StrokeWidth <span class="number">2</span> | Stroke Color <span class="number">41</span>,<span class="number">4</span>,<span class="number">2</span>,<span class="number">255</span> | Fill Color <span class="number">87</span>,<span class="number">149</span>,<span class="number">212</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">MyPath</span>=<span class="number">0</span>,<span class="number">0</span> | LineTo <span class="number">200</span>,<span class="number">0</span> | ArcTo <span class="number">200</span>,<span class="number">100</span> | CurveTo <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span></span><br></pre></td></tr></table></figure>
+
+			<p><b>Notes on Path:</b><br/>
+			All <a href="#AttributeModifiers">Attribute</a> and <a href="#TransformModifiers">Transform</a> modifiers may be used on the shape, but they may only be defined once on the Shape(<em>N</em>) option line. Individual path segments may not be modified, and the named path definition may only contain the starting point, one or more segment definitions, any optional SetLineJoin or SetNoStroke segment commands, and an optional ClosePath value.</p>
+
+			<p>Closed shapes are automatically filled with the default white fill color. Open shapes are not filled by default, although in both instances this may be changed or forced with a <a href="#Fill">Fill</a> attribute modifier on the shape.</p>
+
+			</dd>
+
+			<dt id="Path1" class="sub"><code>Path1</code> <small>Parameters: (See Path above)</small></dt>
+			<dd>
+			<p>Path1 is an alternative form of the Path shape, using all the same parameters. It will use a different form of the <a target="_blank" rel="noopener" href="https://www.w3.org/TR/SVG/painting.html#FillProperties">SVG fill-rule</a> when the shape is filled with a color or gradient. This determines what parts of a shape with intersecting segments are "inside" the shape and what are "outside", for purposes of filling the shape with the defined color or gradient.</p>
+
+			<p><b>Path</b>: This uses an <b>even-odd</b> fill rule. The "insideness" of a point in the shape is determined by imagining a ray from that point to infinity in any direction and counting the number of path segments from the given shape that the ray crosses. If this number is odd, the point is inside; if even, the point is outside.</p>
+
+			<p><b>Path1</b>: This uses a <b>non-zero</b> fill rule. The "insideness" of a point in the shape is determined by imagining a ray from that point to infinity in any direction and then examining the places where a segment of the shape crosses the ray. Starting with a count of zero, add one each time a path segment crosses the ray from left to right and subtract one each time a path segment crosses the ray from right to left. After counting the crossings, if the result is zero then the point is outside the path. Otherwise, it is inside.</p> 
+			</dd>
+
+			<dt id="Combine" class="sub"><code>Combine</code> <small>Parameters: <code><b>Shape<em>N</em> | ...</b></code></small></dt>
+			<dd>
+				<p>Combine is a special shape type, that combines or merges two or more existing closed shapes in the meter, <b>replacing</b> them with a new "combined" shape. The first shape in the Combine definition will be the "parent", and any shapes, separated with the pipe <code>|</code> character, with which it is combined are "children". This distinction is important in the context of how modifiers are inherited or not on combined shapes.</p>
+
+				<p><b>Parameters:</b><br/>
+					<code>ParentShapeName | CombineType ChildShapeName | CombineType ChildShapeName...</code>
+				</p>
+
+				<p id="CombineTypes"><b>Combine types:</b></br>
+					<ul>
+						<li><code>Union</code> : Merges the parent and defined child shapes together in the new shape.</li>
+						<li><code>Intersect</code> : Only the overlapping / intersecting portions of the parent and defined child shapes are drawn in the new shape.</li>
+						<li><code>XOR</code> : Only the NON overlapping / intersecting portions of the parent and defined child shapes are drawn in the new shape.</li>
+						<li><code>Exclude</code> : Only the portion of the parent shape that is NON overlapping / intersecting with the defined child shape is drawn in the new shape.</li>
+					</ul>
+					<a id="toggle_Combine.png" onclick="document.getElementById('Combine.png').style.display=''; document.getElementById('toggle_Combine.png').style.display='none';" class="spoiler">▶ Show Combine Types</a><span id="Combine.png" style="display: none"><a onclick="document.getElementById('Combine.png').style.display='none'; document.getElementById('toggle_Combine.png').style.display='';" class="spoiler">▲ Hide Combine Types</a><br/>
+					<div style="display:inline-block">
+					<img src="/manual/img/shapes/Combine.png"/>
+					</div></span>
+					</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape4=Combine Shape | Union Shape2 | XOR Shape3</code><br/>
+					<code>Shape4=Combine Shape2 | Intersect Shape</code><br/>
+					<code>Shape4=Combine Shape | Union Shape3 | Exclude Shape2</code>
+				</p>
+
+				<p><b>Notes on Combine:</b><br/>
+					When shapes are combined, the parent shape's <a href="#AttributeModifiers">Attribute Modifiers</a>, e.g. Fill and StrokeWidth, are automatically inherited by the new combined shape. Any Attribute modifiers on child shapes or the new combined shape are ignored.<br/><br/>
+					When shapes are combined, all <a href="#TransformModifiers">Transform Modifiers</a>, e.g. Rotate and Scale, on both the parent and child shapes are performed first, before the combine is done. So for instance, a child shape can be rotated, and them combined with a parent shape. The new combined shape can then also have its own Transform Modifiers, which will be done after the shapes are combined.<br/><br/>
+					The order of the front-to-back position of the shapes can be impacted by combining shapes, as the shapes are drawn in the numerical order of their Shape<em>N</em> option name. Since the new combined shape is also a numbered shape option, some thought should be given when numbering combined and uncombined shapes, to get the order you want.<br/><br/>
+					A Combined shape is always closed. Any open shapes or paths used as a parent or child will automatically be closed before they are combined.
+				</p>
+			</dd>
+		</dl>
+
+		<h2 id="AttributeModifiers">Attribute Modifiers</h2>
+
+		<dl>
+			<dt id="Fill" class="sub"><code>Fill</code> <small>Default: <code><b>Color 255,255,255,255</b></code></small></dt>
+			<dd>
+				<p>Method used to fill a closed shape. This will be a keyword defining the type of fill, followed by any required and optional parameters for the type.</p>
+
+				<p><b>Fill Types:</b></br>
+					<ul>
+						<li><code>Color</code> : Fills the shape with a single required <a href="/manual/skins/option-types/#Color">Color</a>. The alpha value of the color code can be used to control the opacity of the shape.<br/>
+							<b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | Fill Color 255,0,0,255</code></li><br/>
+
+						<li><code>LinearGradient</code> : Fills the shape with a linear color gradient. This consists of an angle in degrees, followed by a pipe <code>|</code> character and two or more sets of color ; percentage defining the gradient "stops".<br/>
+							<b>Example:</b> See <a href="#DefiningGradients">Defining Gradients</a> for details and examples.</li><br/>
+
+						<li><code>RadialGradient</code> : Fills the shape with a radial color gradient. This consists of a definition of the gradient coordinates, followed by a pipe <code>|</code> character and two or more sets of color ; percentage defining the gradient "stops".<br/>
+							<b>Example:</b> See <a href="#DefiningGradients">Defining Gradients</a> for details and examples.</li>
+					</ul>
+				</p>
+			</dd>
+
+			<dt id="Stroke" class="sub"><code>Stroke</code> <small>Default: <code><b>Color 0,0,0,255</b></code></small></dt>
+			<dd>
+				<p>Method used to draw the stroke on a shape. This will be a keyword defining the type, followed by any required and optional parameters for the type.</p>
+
+				<p><b>Stroke Types:</b><br/>
+					<ul>
+						<li><code>Color</code> : Draws the stroke with a single required <a href="/manual/skins/option-types/#Color">Color</a>. The alpha value of the color code can be used to control the opacity of the stroke.<br/>
+							<b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | Stroke Color 255,0,0,255</code></li><br/>
+						<li><code>LinearGradient</code> : Draws the stroke with a linear color gradient. This consists of an angle in degrees, followed by a pipe <code>|</code> character and two or more sets of color ; percentage defining the gradient "stops".<br/>
+							<b>Example:</b> See <a href="#DefiningGradients">Defining Gradients</a> for details and examples.</li><br/>
+						<li><code>RadialGradient</code> : Draws the stroke with a radial color gradient. This consists of a definition of the gradient coordinates, followed by a pipe <code>|</code> character and two or more sets of color ; percentage defining the gradient "stops".<br/>
+							<b>Example:</b> See <a href="#DefiningGradients">Defining Gradients</a> for details and examples.</li>
+					</ul>
+				</p>
+			</dd>
+
+			<dt id="StrokeWidth" class="sub"><code>StrokeWidth</code> <small>Default: <code><b>1</b></code></small></dt>
+			<dd>
+				<p>Size in pixels of the drawing stroke on the shape.</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 2,2,100,50 | StrokeWidth 4</code></p>
+
+				<p><b>Notes on StrokeWidth:</b><br/>
+					This is <b>not</b> a "border around" the shape. It is the shape's "drawing stroke". One half of the stroke will be "inside" the shape, and one half will be "outside" the shape. With an odd-numbered StrokeWidth, which can't be divided evenly by two, the very most inside and very most outside pixels will actually be 1/2 pixels in size, with Direct2D "aliasing" the edge of the two pixels, to create "half pixels" and keep the stroke the correct size.<br/><br/>
+
+					If you have a meter at the left or top of the skin, and define a shape with an X or Y of 0, that is where the shape will be drawn. However, since any StrokeWidth added to the shape will have one half of it outside the shape, you will need to move either the meter or the shape right or down to accommodate this, or part of the stroke will be outside the skin and truncated.
+				</p>
+			</dd>
+
+			<dt id="StrokeStartCap" class="sub"><code>StrokeStartCap</code> <small>Default: <code><b>Flat</b></code></small></dt>
+			<dd>
+				<p>Defines the shape of a cap used at the start of the drawing stroke on an open shape. This modifier is ignored on closed shapes.</p>
+
+				<p><b>Cap Types:</b><br/>
+					<ul>
+						<li><code>Flat</code> : This really no end cap, the same as leaving the modifier off entirely.</li>
+						<li><code>Round</code> : </li>
+						<li><code>Square</code> : </li>
+						<li><code>Triangle</code> : </li>
+					</ul>
+					<a id="toggle_StrokeStartCap.png" onclick="document.getElementById('StrokeStartCap.png').style.display=''; document.getElementById('toggle_StrokeStartCap.png').style.display='none';" class="spoiler">▶ Show Start Caps</a><span id="StrokeStartCap.png" style="display: none"><a onclick="document.getElementById('StrokeStartCap.png').style.display='none'; document.getElementById('toggle_StrokeStartCap.png').style.display='';" class="spoiler">▲ Hide Start Caps</a><br/>
+					<div style="display:inline-block">
+					<img src="/manual/img/shapes/StrokeStartCap.png"/>
+					</div></span>
+				</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeStartCap Round</code></p>
+
+			<dt id="StrokeEndCap" class="sub"><code>StrokeEndCap</code> <small>Default: <code><b>Flat</b></code></small></dt>
+			<dd>
+				<p>Defines the shape of a cap used at the end of the drawing stroke on an open shape. This modifier is ignored on closed shapes.</p>
+
+				<p><b>Cap Types:</b><br/>
+					<ul>
+						<li><code>Flat</code> : This really no end cap, the same as leaving the modifier off entirely.</li>
+						<li><code>Round</code> : </li>
+						<li><code>Square</code> : </li>
+						<li><code>Triangle</code> : </li>
+					</ul>
+						<a id="toggle_StrokeEndCap.png" onclick="document.getElementById('StrokeEndCap.png').style.display=''; document.getElementById('toggle_StrokeEndCap.png').style.display='none';" class="spoiler">▶ Show End Caps</a><span id="StrokeEndCap.png" style="display: none"><a onclick="document.getElementById('StrokeEndCap.png').style.display='none'; document.getElementById('toggle_StrokeEndCap.png').style.display='';" class="spoiler">▲ Hide End Caps</a><br/>
+						<div style="display:inline-block">
+						<img src="/manual/img/shapes/StrokeEndCap.png"/>
+						</div></span>
+				</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeEndCap Triangle</code></p>
+
+			<dt id="StrokeDashCap" class="sub"><code>StrokeDashCap</code> <small>Default: <code><b>Flat</b></code></small></dt>
+			<dd>
+				<p>Defines the shape of a cap used at the start and end of each dash in the drawing stroke defined by the <a href="#StrokeDashes">StrokeDashes</a> modifier.</p>
+
+				<p><b>Cap Types:</b><br/>
+					<ul>
+						<li><code>Flat</code> : This really no end cap, the same as leaving the modifier off entirely.</li>
+						<li><code>Round</code> : </li>
+						<li><code>Square</code> : </li>
+						<li><code>Triangle</code> : </li>
+					</ul>
+						<a id="toggle_StrokeDashCap.png" onclick="document.getElementById('StrokeDashCap.png').style.display=''; document.getElementById('toggle_StrokeDashCap.png').style.display='none';" class="spoiler">▶ Show Dash Caps</a><span id="StrokeDashCap.png" style="display: none"><a onclick="document.getElementById('StrokeDashCap.png').style.display='none'; document.getElementById('toggle_StrokeDashCap.png').style.display='';" class="spoiler">▲ Hide Dash Caps</a><br/>
+						<div style="display:inline-block">
+						<img src="/manual/img/shapes/StrokeDashCap.png"/>
+						</div></span>
+				</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeDashes 2,2 | StrokeDashCap Round</code></p>
+			</dd>
+
+			<dt id="StrokeDashes" class="sub"><code>StrokeDashes</code> </dt>
+			<dd>
+				<p>Defines a repeating dash or dot pattern for the shape's drawing stroke.</p>
+
+				<p>This is done with a single or repeating sets of comma-separated pairs of <code>DashSize,GapSize</code>. These are not numbers of pixels, but are a multiplication factor based on the StrokeWidth.  So <code>2, 1.5</code> would be a dash twice as long as the StrokeWidth, followed by a gap one and one-half times as long as the StrokeWidth, and this would be repeated for the entire stroke. This can be extended, i.e <code>2,1,3,1.5,4,2</code> to create a repeating custom dashed stroke of various sizes and gaps.</p>
+
+				<a id="toggle_StrokeDashes.png" onclick="document.getElementById('StrokeDashes.png').style.display=''; document.getElementById('toggle_StrokeDashes.png').style.display='none';" class="spoiler">▶ Show Dashes</a><span id="StrokeDashes.png" style="display: none"><a onclick="document.getElementById('StrokeDashes.png').style.display='none'; document.getElementById('toggle_StrokeDashes.png').style.display='';" class="spoiler">▲ Hide Dashes</a><br/>
+				<div style="display:inline-block">
+				<img src="/manual/img/shapes/StrokeDashes.png"/>
+				</div></span><br/><br/>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeDashes 2,1.5</code></p>
+
+				<p><b>Notes on StrokeDashes:</b><br/>
+					Dots instead of dashes are created in conjunction with the <b>StrokeDashCap</b> option above. If you specify a dash size of <code>0</code>, and a StrokeDashCap of <code>Round</code> you will get dots, <code>Triangle</code> you will get diamonds, and so on. So for instance <code>0,2</code> with a StrokeDaskCap of <code>Round</code> will create NO "dash", just the two rounded end caps next to each other followed by a gap, which will create a dotted line.
+				</p>
+			</dd>
+
+			<dt id="StrokeLineJoin" class="sub"><code>StrokeLineJoin</code> <small>Default: <code><b>Miter<em>, 10.0</em></b></code></small></dt>
+			<dd>
+				<p>Defines the type of join used on angled connections of drawing stroke segments in a shape or path. An optional MiterLimit can be used to specify how sharp Miter joins are allowed to be (default is 10.0).</p>
+
+				<p><b>Join Types:</b><br/>
+					<ul>
+						<li><code>Miter</code> : Mitered corners. The corner will be mitered up to the point of MiterLimit, then squared off.</li>
+						<li><code>Bevel</code> : Beveled or squared corners.</li>
+						<li><code>Round</code> : Rounded corners.</li>
+						<li><code>MiterOrBevel</code> : Miter is used unless the default or defined value of MiterLimit would be exceeded, in which case Bevel is used.</li>
+					</ul>
+					<a id="toggle_StrokeLineJoin.png" onclick="document.getElementById('StrokeLineJoin.png').style.display=''; document.getElementById('toggle_StrokeLineJoin.png').style.display='none';" class="spoiler">▶ Show Joins</a><span id="StrokeLineJoin.png" style="display: none"><a onclick="document.getElementById('StrokeLineJoin.png').style.display='none'; document.getElementById('toggle_StrokeLineJoin.png').style.display='';" class="spoiler">▲ Hide Joins</a><br/>
+					<div style="display:inline-block">
+					<img src="/manual/img/shapes/StrokeLineJoin.png"/>
+					</div></span>
+				</p>
+				<p>Miter or MeterOrBevel can be followed by a "," and an optional value for MiterLimit. Think of MiterLimit as controlling the amount of "pointiness" when a very sharp angle join is mitered. MiterLimit is a positive number greater than or equal to 1.0 that describes the limit as a ratio of the miter length to half the stroke's thickness.</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeLineJoin Bevel</code></p>
+			</dd>
+
+			<dt id="StrokeDashOffset" class="sub"><code>StrokeDashOffset</code> <small>Default: <code><b>0</b></code></small></dt>
+			<dd>
+				<p>Defines an offset where the first dash will start relative to the start of the shape. These are not numbers of pixels, but are a multiplication factor based on the StrokeWidth. So 0.0 would be none, 0.5 would be half the value of the SrokeWidth and 1.5 would be one and a half the value of the StrokeWidth</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | StrokeWidth 4 | StrokeDashes 2,2 | StrokeDashOffset 1.0</code></p>
+			</dd>
+		<dl>
+
+		<h2 id="TransformModifiers">Transform Modifiers</h2>
+
+		<dl>
+			<dt id="Rotate" class="sub"><code>Rotate</code> <small>Default: <code><b>0<em>, AnchorX, AnchorY</em></b></code></small></dt>
+			<dd>
+				<p>Rotates the shape some number of positive or negative degrees of angle, either around the center of the shape (default), or optional X,Y anchor points in pixels relative to the top left of the shape.</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Rotate 45</code><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Rotate 90,10,50</code>
+				</p>
+			</dd>
+
+			<dt id="Scale" class="sub"><code>Scale</code> <small>Default: <code><b>1.0, 1.0<em>, AnchorX, AnchorY</em></b></code></small></dt>
+			<dd>
+				<p>Scales the shape in the X and / or Y axis, using multiplication factors. Reducing the scale would be done with a scaling factor less than 1. The scaling is done either from the center of the shape (default), or optional X,Y anchor points in pixels relative to the top left of the shape.</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Scale 1.5,0</code><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Scale 3.0,0.5,100,100</code>
+				</p>
+
+				<p><b>Notes on Scale:</b><br/>
+					The size of any StrokeWidth, the drawing stroke, is not effected by scaling the shape. If you specify a StrokeWidth of 4, it will remain 4 pixels in size no matter how you scale the shape.</p>
+
+					<p>A shape may be "flipped" or "mirrored" using Scale, by simply scaling it <code>-1.0</code> on the axis you wish to flip. So Horizontal would be <code>-1.0,1.0</code>, Vertical would be <code>1.0,-1.0</code>, and Both would be <code>-1.0,-1.0</code>.</p>
+			</dd>
+
+			<dt id="Skew" class="sub"><code>Skew</code> <small>Default: <code><b>0.0, 0.0<em>, AnchorX, AnchorY</em></b></code></small></dt>
+			<dd>
+				<p>Skews the shape in the X and / or Y axis, some number of positive or negative degrees of angle. The skew is done either from the center of the shape (default), or optional X,Y anchor points in pixels relative to the top left of the shape.</p>
+
+				<p><b>Examples:</b><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Skew 20,0</code><br/>
+					<code>Shape=Rectangle 0,0,100,100 | Skew 0,-20,100,0</code>
+				</p>
+			</dd>
+
+			<dt id="Offset" class="sub"><code>Offset</code> <small>Default: <code><b>0, 0</b></code></small></dt>
+			<dd>
+				<p>Offsets (moves) the shape in the X and / or Y axis some number of positive or negative pixels.</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | Offset 10,0</code></p>
+			</dd>
+
+			<dt id="TransformOrder" class="sub"><code>TransformOrder</code> <small>Default: <code><b>Rotate, Scale, Skew, Offset</b></code></small></dt>
+			<dd>
+				<p>Allows you to change the default order in which the various Transform modifiers are applied. This can be important when anchor points are used in transforms, as for instance you may want to Scale before you Rotate. Any missing Transform modifier names will be placed to the back of the queue in the default order.</p>
+
+				<p><b>Example:</b> <code>Shape=Rectangle 0,0,100,100 | TransformOrder Scale,Rotate</code><br/>
+					In this example the resulting order would be Scale,Rotate,Skew,Offset
+				</p>
+			</dd>
+		</dl>
+
+		<h2 id="ExtendModifier">Extend Modifier</h2>
+
+		<dl>
+			<dt id="Extend" class="sub"><code>Extend</code> </dt>
+			<dd>
+				<p>A special modifier that will allow you to move Attribute and / or Transform modifiers from the Shape<em>N</em> option to one or more named options in the meter. The intent of this is two-fold. First, to allow different shape to <b>share</b> modifiers without having to specify them repeatedly in each shape option. Second, to provide a way to <b>shorten</b> the overall length of the shape option line, by breaking out modifiers as desired to separate named options.</p>
+
+				<p><b>Example:</b></p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShapes]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">50</span> | Extend MySharedModifiers, MyRotateAndScale1</span><br><span class="line"><span class="attr">Shape2</span>=Rectangle <span class="number">20</span>,<span class="number">10</span>,<span class="number">50</span>,<span class="number">50</span> | Extend MySharedModifiers, MyRotateAndScale2</span><br><span class="line"><span class="attr">MySharedModifiers</span>=Fill Color <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">MyRotateAndScale1</span>=Rotate <span class="number">20</span> | Scale <span class="number">1.5</span>,<span class="number">0</span></span><br><span class="line"><span class="attr">MyRotateAndScale2</span>=Rotate <span class="number">45</span> | Scale <span class="number">2.0</span>,<span class="number">1.5</span></span><br></pre></td></tr></table></figure>
+				<p><b>Notes on Extend:</b><br/>
+					The named options can be any names you like, however as with any other option in a .ini file, they must be unique to the [Section].<br/><br/>
+
+					This functionality cannot "cascade". You can't have a named Extend option use an Extend modifier.<br/><br/>
+
+					The modifiers in the named option are in effect "inserted" in the Shape<em>N</em> option line where the Extend keyword is located. In the case of any duplication of a modifier this inadvertently causes, the rule is "last wins". If there are two instances of for example StrokeWidth that end up being defined for a single Shape<em>N</em> option, the last one that is defined after all Extend named options are "inserted" will be performed.
+				</p>
+			</dd>
+		</dl>
+	</dd>
+</dl>
+
+<h2 id="DefiningGradients">Defining Gradients</h2>
+
+<p>Gradients <b>must</b> be defined in a separate named option, which you then reference in <a href="#Fill">Fill</a> or <a href="#Stroke">Stroke</a> modifiers on the shape. There are two kinds of gradients possible, LinearGradient and RadialGradient.</p>
+
+<p><b>Examples:</b></p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="comment">; Filling the shape with a gradient</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span> | Fill LinearGradient MyFillGradient</span><br><span class="line"><span class="attr">MyFillGradient</span>=<span class="number">180</span> | <span class="number">255</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">255</span> <span class="comment">; 0.0 | 0,255,0,255 ; 0.5 | 0,0,255,255 ; 1.0</span></span><br><span class="line"><span class="comment">; Drawing the stroke with a gradient</span></span><br><span class="line"><span class="attr">Shape2</span>=Rectangle <span class="number">50</span>,<span class="number">50</span>,<span class="number">100</span>,<span class="number">100</span> | StrokeWidth <span class="number">10</span> | Stroke LinearGradient MyStrokeGradient</span><br><span class="line"><span class="attr">MyStrokeGradient</span>=<span class="number">270</span> | <span class="number">0</span>,<span class="number">0</span>,<span class="number">255</span>,<span class="number">255</span> <span class="comment">; 0.0 | 0,255,0,255 ; 0.5 | 255,0,0,255 ; 1.0</span></span><br></pre></td></tr></table></figure>
+
+<dl>
+	<dt id="LinearGradient" class="sub"><code>LinearGradient</code> <small>Parameters: <code><b>Angle | Color ; Percentage</b> | <em>...</em></code></small></dt>
+	<dd>
+		<p>This takes the form of the <b>Angle</b> for the gradient in degrees, a <b>|</b> pipe character, then a series of <b>Color codes</b>, a <b>;</b> semi-colon, and a <b>Percentage</b> from 0.0 to 1.0 to define the position of the color in the gradient. Each series of <b>Color ; Percentage</b> are separated by a <b>|</b> pipe character.</p>
+
+		<p><b>Example:</b></p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">1</span>,<span class="number">1</span>,<span class="number">101</span>,<span class="number">101</span> | Fill LinearGradient MyFillGradient</span><br><span class="line"><span class="attr">MyFillGradient</span>=<span class="number">180</span> | <span class="number">255</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">255</span> <span class="comment">; 0.0 | 0,255,0,255 ; 0.5 | 0,0,255,255 ; 1.0</span></span><br></pre></td></tr></table></figure>
+		<p>That will define a gradient at 180 degrees. It will start with a color of 255,0,0,255 (red) at percentage 0.0 (the start), will transition to a color of 0,255,0,255 (green) at percentage 0.5 (50 percent), and to 0,0,255,255 (blue) at percentage 1.0 (100 percent).</p>
+
+		<p>The <b>Angle</b> is defined as any number of degrees, with 0 or 360 starting directly to the right and rotating clockwise. This results in the following gradient <em>directions</em> on the Shape or Stroke:</p>
+
+		<ul>
+			<li><b>0</b> (360) : Right to Left</li>
+			<li><b>90</b> : Bottom to Top</li>
+			<li><b>180</b> : Left to Right</li>
+			<li><b>270</b> : Top to Bottom</li>
+		</ul>
+
+		<p><b>Note:</b> Any defined color with a percentage outside the 0.0 to 1.0 range will not directly be displayed, but will still affect the interpolation of the gradient.</p>
+	</dd>
+
+	<dt id="RadialGradient" class="sub"><code>RadialGradient</code> <small>Parameters: (See below)</small></dt>
+	<dd>
+		<p>This takes the form of the required <code>CenterX, CenterY</code> and any optional coordinate parameters, a <b>|</b> pipe character, then a series of <b>Color codes</b>, a <b>;</b> semi-colon, and a <b>Percentage</b> from 0.0 to 1.0 to define the position of the color in the gradient. Each series of <b>Color ; Percentage</b> are separated by a <b>|</b> pipe character.</p>
+
+		<p><b>Parameters:</b> <code><b>CenterX, CenterY</b><em>, OffsetX, OffsetY, RadiusX, RadiusY</em> | <b>Color ; Percentage</b> | <em>...</em></code>
+			<ul>
+				<li><code>CenterX</code> (required): Amount of pixels along the x-axis from the center of the shape to offset the center of the gradient ellipse.</li>
+				<li><code>CenterY</code> (required): Amount of pixels along the y-axis from the center of the shape to offset the center of the gradient ellipse.</li>
+				<li><code>OffsetX</code> (optional): Amount of pixels along the x-axis to offset the gradient origin relative to the gradient ellipse's center (CenterX).</li>
+				<li><code>OffsetY</code> (optional): Amount of pixels along the y-axis to offset the gradient origin relative to the gradient ellipse's center (CenterY).</li>
+				<li><code>RadiusX</code> (optional): The radius along the x-axis of the gradient ellipse.</li>
+				<li><code>RadiusY</code> (optional): The radius along the y-axis of the gradient ellipse.</li>
+				<li><code>Color ; Percentage</code> (required): 1 or more color and percentage pairs (separated by a semi-colon<code>;</code>) that defines the colors at specific percentages in the gradient.</li>
+			</ul>
+		</p>
+
+		<p><b>Examples:</b></p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[MeterShape]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">Shape</span>=Ellipse <span class="number">50</span>,<span class="number">50</span>,<span class="number">50</span> | StrokeWidth <span class="number">0</span> | Fill RadialGradient MyGradient1</span><br><span class="line"><span class="attr">MyGradient1</span>=<span class="number">0</span>,<span class="number">0</span> | <span class="number">155</span>,<span class="number">200</span>,<span class="number">232</span>,<span class="number">255</span> <span class="comment">; 0.0 | 6,46,75,255 ; 1.0</span></span><br><span class="line"><span class="attr">Shape2</span>=Ellipse <span class="number">170</span>,<span class="number">50</span>,<span class="number">50</span> | StrokeWidth <span class="number">0</span> | Fill RadialGradient MyGradient2</span><br><span class="line"><span class="attr">MyGradient2</span>=<span class="number">0</span>,<span class="number">0</span>,<span class="number">20</span>,<span class="number">20</span> | <span class="number">155</span>,<span class="number">200</span>,<span class="number">232</span>,<span class="number">255</span> <span class="comment">; 0.0 | 6,46,75,255 ; 1.0</span></span><br></pre></td></tr></table></figure>
+
+		<p><b>Note:</b> Any defined color with a percentage outside the 0.0 to 1.0 range will not directly be displayed, but will still affect the interpolation of the gradient.</p>
+	</dd>
+</dl>
+
+<p><b>Note on Gradients:</b></p>
+
+<p>An alternative form of the gradients can be used by adding a "1" to the end of LinearGradient or RadialGradient These <code>LinearGradient1</code> and <code>RadialGradient1</code> forms use all the same setting values, but interpolate the gradient using an alternative method of handling gamma correction. In some cases you may find this makes for a smoother or brighter gradient transition.</p>
+
+<h2 id="MouseDetection">Mouse Detection on Shapes</h2>
+
+<p>The behavior of <a href="/manual/mouse-actions/">Mouse Actions</a>, for actions like <code>LeftMouseUpAction</code>, <code>MouseOverAction</code>, <code>MouseScrollDownAction</code> and the others is a bit different on a Shape meter than other meters.</p>
+
+<p><b>In a Shape meter, the mouse is only detected on any solid part of the drawing created by any and all shapes in the meter. It is not dependent on any rectangular meter container. The mouse will instead be detected on any solid pixel created by the actual shape objects being drawn.</b></p>
+
+<p><b>The mouse will be detected on any solid part of the shapes even if the shapes extend outside the boundaries of the meter container.</b> This will be common with this meter type and is why we have changed the "target" of the mouse detection from the meter to the shapes. Quite often, there will be no W and H defined on the meter, and thus no meter container at all.</p>
+
+<p>As always, there can only be one of each kind of mouse action in a [Section]. This means that you can't for instance have two Shape<em>N</em> shapes in the meter, and have a distinct <code>LeftMouseUpAction</code> on each. In order to have distinct mouse actions of the same type on individual shapes, you will need to create the shapes in different Shape meters.<p>
+
+<h2 id="DeviceIndependentPixels">Device Independent Pixels</h2>
+
+<p>The values for pixels that are used in the Shape meter are <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Device-independent_pixel">Device Independent Pixels</a>, and thus may be fractional. You may use 10.25 pixels or even 0.754 pixels when defining a shape. This is important for precision. However, this is only for the values used in shapes. The values used for meters, the W and H and X and Y of a Rainmeter meter, are still as of this writing in full integer pixels.</p>
+
+<h2 id="Examples">Examples</h2>
+<p>While the code here is for a simple skin that demonstrates various ways to manipulate the Rectangle shape type, the .rmskin in the Download button is a much more robust suite of skins demonstrating many of the aspects of the Shape meter.</p>
+
+<a href="/manual/examples/ExamplesMeterShape.rmskin" class="download"></a>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[Rainmeter]</span></span><br><span class="line"><span class="attr">Update</span>=<span class="number">1000</span></span><br><span class="line"><span class="attr">DynamicWindowSize</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">AccurateText</span>=<span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterRectangle]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterRotatedRectangle]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">25</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">14</span>r</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">70</span>,<span class="number">70</span> | Extend MyModifiers1, MyModifiers2</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"><span class="attr">MyModifiers2</span>=Rotate <span class="number">45</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterRoundedRectangle]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span>,<span class="number">20</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterRoundedX]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span>,<span class="number">40</span>,<span class="number">20</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterRoundedY]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span>,<span class="number">20</span>,<span class="number">40</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterOvalWide]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">15</span>r</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">70</span>,<span class="number">50</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterOvalTall]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">70</span>,<span class="number">100</span>,<span class="number">50</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterEllipse]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">10</span>R</span><br><span class="line"><span class="attr">Y</span>=<span class="number">2</span></span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">100</span>,<span class="number">100</span>,<span class="number">50</span> | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">4</span> | Stroke Color <span class="number">46</span>,<span class="number">115</span>,<span class="number">31</span>,<span class="number">255</span></span><br><span class="line"></span><br><span class="line"><span class="section">[MeterLine]</span></span><br><span class="line"><span class="attr">Meter</span>=Shape</span><br><span class="line"><span class="attr">X</span>=<span class="number">0</span></span><br><span class="line"><span class="attr">Y</span>=<span class="number">20</span>R</span><br><span class="line"><span class="attr">Shape</span>=Rectangle <span class="number">0</span>,<span class="number">0</span>,<span class="number">858</span>,<span class="number">2</span>, | Extend MyModifiers1</span><br><span class="line"><span class="attr">MyModifiers1</span>=Fill Color <span class="number">191</span>,<span class="number">237</span>,<span class="number">239</span>,<span class="number">255</span> | StrokeWidth <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<div class="exampleprev">
+	<a href="/manual/img/example-meters/ExampleMeterShape.jpg" data-fancybox><img src="/manual/img/example-meters/ExampleMeterShape.jpg"></a>
+	<p>An example skin demonstrating various ways to manipulate the Rectangle shape type.</p>
+</div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Include Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-6">© 2026 Rainmeter Team</div>
+      <div class="col-6 text-right"><button id="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> <span>Light theme</span></button></div>
+    </div>
+  </div>
+</footer>
+
+
+
+	<!-- Javascript files  -->
+	<script src="/js/main.js?v=0b0053a2"></script>
+	<script src="/js/jquery-3.2.1.slim.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	<script src="/js/ahk-sliding-panel.js"></script>
+	<script src="/js/jquery.fancybox.min.js"></script>
+
+	<!-- Script for the slideout menu on mobile -->
+	<script>
+		// set slideout menu variables
+		var docsnav = new ahk_slideout({
+		  id: "menu",
+		  side: "left",
+		  width: "18rem",
+		  touch_boundary: "50",
+		  slide_time: "0.2"
+		})
+
+		// function to toggle menu
+		function openNavMenu() {
+		  docsnav.openMenu()
+		}
+		// function to close menu
+		function closeNavMenu() {
+		  docsnav.closeMenu()
+		}
+
+		// when scrolling below 90, add sticky class to nav-button
+		$(function() {
+		  var header = $("#nav-button");
+		  $(window).scroll(function() {
+		    var scroll = $(window).scrollTop();
+		    if (scroll >= 90) {
+		      header.addClass("sticky");
+		    } else {
+		      header.removeClass("sticky");
+		    }
+		  });
+		});
+	</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a454ab4c2a1817c8',t:'MTc5MTEyMTk2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

@@ -23,7 +23,7 @@ from .gpu_map import resolve as resolve_gpu_map
 from .gpu_map import _scan_small_services
 from .host_metrics import GpuCollector, HostCollector
 from .settings import APP_NAME, AUTH_ENABLED, AUTH_PASSWORD, AUTH_USERNAME, GPU_MEMORY_WARNING, GPU_TEMP_CRITICAL, GPU_TEMP_WARNING, NET_CYCLE_BASE_GB, NET_CYCLE_START_DAY, QUEUE_WARNING, SAMPLE_INTERVAL, TZ_OFFSET_HOURS
-from .summary import build_summary
+from .summary import build_skin_payload, build_summary
 from .vllm_metrics import VllmCollector
 
 
@@ -361,6 +361,14 @@ async def summary():
     """桌面小组件专用聚合端点：state+energy 一次给全、展示语义服务端算好（见 summary.py）。"""
     energy_data = await asyncio.to_thread(_cumulative_energy)
     return build_summary(state, energy_data)
+
+
+@app.get("/api/skin")
+async def skin(part: str = "top"):
+    """Rainmeter 皮肤专用：固定顺序的值数组（规避 WebParser 99 个 StringIndex 上限与键序耦合）。
+    part=top（表头/模型/CPU/额度/页脚）| part=gpu（GPU 阵列）。见 summary.py 顶部说明。"""
+    energy_data = await asyncio.to_thread(_cumulative_energy)
+    return build_skin_payload(state, energy_data, "gpu" if part == "gpu" else "top")
 
 
 @app.get("/api/stream")

@@ -409,3 +409,109 @@ def build_summary(state: dict[str, Any], energy: dict[str, Any]) -> dict[str, An
         "iface": net.get("iface") or "?",
         "refreshS": 6,
     }
+
+
+# ---------------------------------------------------------------------------
+# Rainmeter 皮肤专用载荷（扁平值数组）
+#
+# 为什么不用 /api/summary 的对象结构：Rainmeter 的 WebParser 单亲度量最多 99 个
+# StringIndex，且按 key 写正则会绑定 JSON 键序（改一个字段就全线错位）。这里改为
+# 「固定顺序的值数组」，客户端只按序号取，配色/单位/取整这些展示语义仍在服务端算。
+# 每个部分的长度必须 ≤ 99（TOP=81，GPU=81），新增字段要同步 gen_skin2.py 的 FIELD 表。
+# ---------------------------------------------------------------------------
+SKIN_PALETTE = ["78,156,255", "52,211,153", "245,158,11", "167,139,250", "244,114,182", "34,211,238"]
+SKIN_IDLE = "100,116,139"
+SKIN_HOT = "239,68,68"
+SKIN_BG = "13,19,33"
+SKIN_TEXT = "226,232,240"
+SKIN_DIM = "148,163,184"
+SKIN_WARN = "245,184,58"
+SKIN_CRIT = "239,68,68"
+SKIN_OK = "126,226,168"
+SKIN_ACCENT = "110,140,255"
+
+SKIN_TOP_FIELDS = 81
+SKIN_GPU_FIELDS = 81
+
+
+def _skin_san(text: Any) -> str:
+    """值数组用 "","" 分隔，值内不允许出现引号/反斜杠/换行，否则会切断正则匹配。"""
+    return (str(text).replace('"', "'").replace("\\", "/")
+            .replace("\n", " ").replace("\r", " ").replace("\t", " "))
+
+
+def _skin_clip(text: Any, limit: int) -> str:
+    """限长：右对齐列不设 W/ClipString（避免右对齐下裁剪框语义歧义），改在服务端截断。"""
+    t = str(text)
+    return t if len(t) <= limit else t[: limit - 1] + "…"
+
+
+def _skin_tone_color(tone: int) -> str:
+    return (SKIN_TEXT, SKIN_WARN, SKIN_CRIT)[tone] if 0 <= tone <= 2 else SKIN_TEXT
+
+
+def _skin_pal(idx: int) -> str:
+    return SKIN_PALETTE[idx] if 0 <= idx < len(SKIN_PALETTE) else SKIN_IDLE
+
+
+def _skin_pct(value: float, full: float) -> str:
+    if full <= 0:
+        return "0"
+    return str(max(0, min(100, int(round(value / full * 100)))))
+
+
+def build_skin_payload(state: dict[str, Any], energy: dict[str, Any], part: str = "top") -> dict[str, Any]:
+    s = build_summary(state, energy)
+    ts = float(s.get("ts") or 0)
+    age = max(0.0, time.time() - ts) if ts else 99999.0
+    if age < 30:
+        stat_text, stat_color = "实时", SKIN_OK
+    elif age < 120:
+        stat_text, stat_color = "数据延迟", SKIN_WARN
+    else:
+        stat_text, stat_color = "离线 · 检查网络", SKIN_CRIT
+
+    v: list[str] = []
+    if part == "gpu":
+        v.append(f'GPU × {GPU_SLOTS} · 总 {s["gpuW"]}W + {OTHER_W}W')
+        for g in s["gpus"]:
+            if g.get("mIdx") == 2 or int(g.get("idx", -1)) < 0:
+                v += ["", "", "", "0", SKIN_BG]      # 空槽位：文字空、条色同背景 → 视觉消失
+                continue
+            bar = int(g.get("bar", 6))
+            color = SKIN_HOT if bar == 7 else (_skin_pal(bar) if bar < 6 else SKIN_IDLE)
+            v += [_skin_clip(g.get("label", ""), 16), _skin_clip(g.get("memG", ""), 8),
+                  _skin_clip(g.get("meta", ""), 26), str(g.get("util", "0")), color]
+        assert len(v) == SKIN_GPU_FIELDS, f"GPU 字段数 {len(v)} != {SKIN_GPU_FIELDS}"
+        return {"v": [_skin_san(x) for x in v]}
+
+    models_on = sum(1 for m in s["models"] if m.get("name") and m.get("stIdx") == 0)
+    models_all = sum(1 for m in s["models"] if m.get("name"))
+    v += ["vLLM SENTINEL", stat_text, stat_color, f"模型服务 {models_on}/{models_all} 在线"]
+    for m in s["models"]:
+        if not m.get("name"):
+            v += ["", "", SKIN_BG, SKIN_BG]
+            continue
+        dot = (SKIN_OK, SKIN_WARN, SKIN_CRIT, SKIN_BG)[min(int(m.get("stIdx", 3)), 3)]
+        v += [_skin_clip(m["name"], 22), _skin_clip(m.get("value", ""), 30),
+              _skin_pal(int(m.get("cIdx", 6))), dot]
+
+    v += ["总使用率", f'{s["cpuUse"]} %', SKIN_TEXT, _skin_pct(float(s["cpuUse"] or 0), 100)]
+    v += ["内存使用率", f'{s["memUse"]} %', SKIN_TEXT, _skin_pct(float(s["memUse"] or 0), 100)]
+    v += ["内存温度", s["dimm"], _skin_tone_color(int(s["dimmTone"])), "0"]
+    v += ["内存供电温度", s["vr"], _skin_tone_color(int(s["vrTone"])), "0"]
+    v += ["最高单核", f'{s["maxCore"]} %', SKIN_TEXT, _skin_pct(float(s["maxCore"] or 0), 100)]
+    v += ["CPU 温度", s["cpuTemp"], _skin_tone_color(int(s["cpuTone"])), "0"]
+    v += ["线程 / 频率", f'{s["threads"]} 线程 · {s["freqM"]}MHz', SKIN_TEXT, "0"]
+    v += ["整机功耗", f'{s["totalW"]} W', SKIN_TEXT, _skin_pct(float(s["totalW"] or 0), 1500)]
+
+    v += ["本月额度", f'{s["costM"]} / {MONTH_BUDGET:.0f} 元',
+          SKIN_WARN if int(s["costMTone"]) else SKIN_ACCENT, _skin_pct(float(s["costM"] or 0), MONTH_BUDGET)]
+    v += ["本年额度", f'{s["costY"]} / {YEAR_BUDGET:.0f} 元',
+          SKIN_WARN if int(s["costYTone"]) else SKIN_ACCENT, _skin_pct(float(s["costY"] or 0), YEAR_BUDGET)]
+    v += ["网络流量（20日起计）", f'{s["netTB"]} / {NET_TOTAL_TB} TB',
+          SKIN_CRIT if int(s["netWarn"]) else SKIN_ACCENT, _skin_pct(float(s["netTB"] or 0), NET_TOTAL_TB)]
+
+    v.append(f'点击打开控制台 · {s["host"]} · {s["iface"]} · {s["refreshS"]}s 刷新')
+    assert len(v) == SKIN_TOP_FIELDS, f"TOP 字段数 {len(v)} != {SKIN_TOP_FIELDS}"
+    return {"v": [_skin_san(x) for x in v]}

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Meta tags for proper character encoding and social media handling  -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=0.9, maximum-scale=0.9">
+	<meta itemprop="name" content="[Rainmeter] section - Rainmeter Docs">
+	<meta property="og:title" content="[Rainmeter] section - Rainmeter Docs">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://www.rainmeter.net">
+	<meta property="og:image" content="https://www.rainmeter.net/img/media_image.png">
+	<meta property="og:site_name" content="Rainmeter">
+	<meta property="og:locale" content="en_US" />
+
+	<!-- Page title  -->
+	<title>[Rainmeter] section - Rainmeter Documentation</title>
+
+	<script>
+		(function() {
+			var theme = null;
+			try {
+				theme = localStorage.getItem('theme');
+			} catch (e) {
+			}
+			if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				theme = 'dark';
+			}
+			if (theme) {
+				document.documentElement.setAttribute('data-theme', theme);
+				document.documentElement.style.colorScheme = theme;
+			}
+		})();
+	</script>
+
+	<!-- Files need to be local for offline version of documentations -->
+	<link rel="stylesheet" href="/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/css/rainmeter.css?v=24f3b22e">
+	<link rel="stylesheet" href="/css/jquery.fancybox.min.css">
+	<link rel="stylesheet" href="/css/fontawesome.css">
+	<link rel="stylesheet" href="/css/solid.css">
+
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600">
+	<link href="https://fonts.googleapis.com/css?family=Nunito:400,700" rel="stylesheet">
+
+	<!-- Site icon -->
+	<link rel="shortcut icon" href="https://www.rainmeter.net/favicon.ico?v=2">
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body><a href="https://docs.rainmeter.net/cdn-cgi/content?id=xEOKOS4QMXmbpWxgvDUNbunHHAUW5L1GveAgU4VuA2c-1791122011.1055882-1.2.1.1-uReSPLab8XLyAQ.KFFfupKRhHFqOFEzdyecnyk2YxE2s94dszMfV33bWwORFMKAC" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+
+  <!-- Get current path and set it as a variable -->
+
+
+<!-- Include navbar -->
+<nav id="navbar" class="navbar navbar-expand-lg navbar-dark">
+	<div class="container">
+		<a class="navbar-brand" href="https://docs.rainmeter.net"><img src="/img/logo_nav.png" alt=""></a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse justify-content-end" id="mainNavigation">
+			<ul class="navbar-nav order-12">
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//www.rainmeter.net/">Home</a>
+                		</li>
+					
+                
+					
+						<li class="nav-item ">
+                    		<a class="nav-link" href="../../../index.html">Documentation</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//rainmeter.net/discover">Discover</a>
+                		</li>
+					
+                
+					
+                		<li class="nav-item>">
+                    		<a class="nav-link" href="//forum.rainmeter.net/">Community</a>
+                		</li>
+					
+                
+                <div class="dropdown-divider"></div>
+		</div>
+	</div>
+</nav>
+
+<div id="content">
+    <div id="nav-button" class="docs-nav-button">
+      <div class="container d-flex flex-row align-items-center">
+      <svg onclick="openNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <a onclick="openNavMenu()">Open navigation</a>
+  </div>
+</div>
+
+  <div class="container">
+    <div class="row">
+
+      <!-- Sidenav -->
+      <div id="menu" class="docs-nav col-12 col-lg-3">
+        
+
+<h4 id="category"><a href="/manual">Manual</a></h4>
+<svg class="closeButton" onclick="closeNavMenu()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<form id="search-form" method="get" action="https://www.google.com/search">
+  <input name="sitesearch" value="docs.rainmeter.net" type="hidden">
+  <input class="form-control" id="search" name="q" maxlength="255" size="16" placeholder="Search" type="text">
+</form>
+<hr />
+<nav id="sidenav" class="sidenav">
+<h4>Contents</h4>
+<ul class="docs-nav-block">
+	<li><a href="/manual/getting-started/">Getting Started</a>
+		<ul>
+		<li><a href="/manual/getting-started/setting-up/">Setting Up</a>
+		<li><a href="/manual/getting-started/using-rainmeter/">Using Rainmeter</a>
+		<li><a href="/manual/getting-started/customizing/">Customizing</a>
+		<li><a href="/manual/getting-started/creating-skins/">Creating Skins</a>
+		<li><a href="/manual/getting-started/skin-anatomy/">Anatomy of a Skin</a>
+		<li><a href="/manual/getting-started/basic-tutorials/">Basic Tutorials</a>
+			<ul>
+			<li><a href="/manual/getting-started/basic-tutorials/launcher/">Launcher</a>
+			<li><a href="/manual/getting-started/basic-tutorials/clock/">Clock</a>
+			<li><a href="/manual/getting-started/basic-tutorials/system/">System</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/installing-rainmeter/">Installing Rainmeter</a>
+			<ul>
+			<li><a href="/manual/installing-rainmeter/auto-update/">Auto Update</a>
+			</ul>
+	<li><a href="/manual/user-interface/">User Interface</a>
+		<ul>
+		<li><a href="/manual/user-interface/manage/">Manage</a>
+	<ul>
+		<li><a href="/manual/user-interface/manage/new-skin">New Skin</a>
+	</ul>
+		<li><a href="/manual/user-interface/about/">About</a>
+		<li><a href="/manual/user-interface/context-menus/">Context Menus</a>
+		</ul>
+	<li><a href="/manual/installing-skins/">Installing Skins</a>
+	<li><a href="/manual/arranging-skins/">Arranging Skins</a>
+	<li><a href="/manual/distributing-skins/">Distributing Skins</a>
+	<ul>
+		<li><a href="/manual/distributing-skins/vault-folder/">@Vault Folder</a>
+	</ul>
+	</ul>
+
+	<h4>Reference</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/manual/settings/">Settings</a>
+		<ul>
+		<li><a href="/manual/settings/rainmeter-section/">[Rainmeter] Section</a>
+		<li><a href="/manual/settings/traymeasure-section/">[TrayMeasure] Section</a>
+		<li><a href="/manual/settings/skin-sections/">[Skin] Sections</a>
+		</ul>
+	<li><a href="/manual/skins/">Skins</a>
+		<ul>
+		<li><a href="/manual/skins/option-types/">Option Types</a>
+		<li><a href="/manual/skins/rainmeter-section/">[Rainmeter] Section</a>
+			<ul>
+				<li><a href="/manual/skins/rainmeter-section/defaults/">Default Settings
+			</ul>
+		<li><a href="/manual/skins/metadata-section/">[Metadata] Section</a>
+		<li><a href="/manual/skins/include-option/">@Include Options</a>
+		<li><a href="/manual/skins/resources-folder/">@Resources Folder</a>
+		</ul>
+	<li><a href="/manual/meters/">Meters</a>
+		<ul>
+		<li><a href="/manual/meters/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/meters/general-options/image-options/">Image Options</a>
+			<li><a href="/manual/meters/general-options/meterstyles/">MeterStyles</a>
+			<li><a href="/manual/meters/general-options/tooltips/">Tooltips</a>
+			<li><a href="/manual/meters/general-options/container/">Container</a>
+			</ul>
+		<li><a href="/manual/meters/bar/">Bar</a>
+		<li><a href="/manual/meters/bitmap/">Bitmap</a>
+		<li><a href="/manual/meters/button/">Button</a>
+		<li><a href="/manual/meters/histogram/">Histogram</a>
+		<li><a href="/manual/meters/image/">Image</a>
+		<li><a href="/manual/meters/line/">Line</a>
+		<li><a href="/manual/meters/rotator/">Rotator</a>
+		<li><a href="/manual/meters/roundline/">Roundline</a>
+		<li><a href="/manual/meters/shape/">Shape</a>
+		<li><a href="/manual/meters/string/">String</a>
+	<ul>
+		<li><a href="/manual/meters/string/inline/">Inline Options</a>
+	</ul>
+		</ul>
+	<li><a href="/manual/measures/">Measures</a>
+		<ul>
+		<li><a href="/manual/measures/general-options/">General Options</a>
+			<ul>
+			<li><a href="/manual/measures/general-options/ifactions/">IfActions</a>
+			<li><a href="/manual/measures/general-options/ifconditions/">IfConditions</a>
+			<li><a href="/manual/measures/general-options/ifmatchactions/">IfMatchActions</a>
+			<li><a href="/manual/measures/general-options/substitute/">Substitute</a>
+			</ul>
+		<li><a href="/manual/measures/calc/">Calc</a>
+		<li><a href="/manual/measures/cpu/">CPU</a>
+		<li><a href="/manual/measures/freediskspace/">FreeDiskSpace</a>
+		<li><a href="/manual/measures/loop/">Loop</a>
+		<li><a href="/manual/measures/mediakey/">MediaKey</a>
+		<li><a href="/manual/measures/memory/">Memory</a>
+		<li><a href="/manual/measures/net/">Net</a>
+		<li><a href="/manual/measures/nowplaying/">NowPlaying</a>
+		<li><a href="/manual/measures/plugin/">Plugin</a>
+		<li><a href="/manual/measures/process/">Process</a>
+		<li><a href="/manual/measures/recyclemanager/">RecycleManager</a>
+		<li><a href="/manual/measures/registry/">Registry</a>
+		<li><a href="/manual/measures/script/">Script</a>
+		<li><a href="/manual/measures/string/">String</a>
+		<li><a href="/manual/measures/sysinfo/">SysInfo</a>
+		<li><a href="/manual/measures/time/">Time</a>
+		<li><a href="/manual/measures/uptime/">Uptime</a>
+		<li><a href="/manual/measures/webparser/">WebParser</a>
+		<li><a href="/manual/measures/wifistatus/">WiFiStatus</a>
+		</ul>
+	<li><a href="/manual/plugins/">Plugins</a>
+		<ul>
+		<li><a href="/manual/plugins/actiontimer/">ActionTimer</a>
+		<li><a href="/manual/plugins/audiolevel/">AudioLevel</a>
+		<li><a href="/manual/plugins/coretemp/">CoreTemp</a>
+		<li><a href="/manual/plugins/fileview/">FileView</a>
+		<li><a href="/manual/plugins/folderinfo/">FolderInfo</a>
+		<li><a href="/manual/plugins/inputtext/">InputText</a>
+		<li><a href="/manual/plugins/ping/">Ping</a>
+		<li><a href="/manual/plugins/power/">Power</a>
+		<li><a href="/manual/plugins/quote/">Quote</a>
+		<li><a href="/manual/plugins/resmon/">ResMon</a>
+		<li><a href="/manual/plugins/runcommand/">RunCommand</a>
+		<li><a href="/manual/plugins/speedfan/">SpeedFan</a>
+		<li><a href="/manual/plugins/usagemonitor/">UsageMonitor</a>
+		<li><a href="/manual/plugins/win7audio/">Win7Audio</a>
+		<li><a href="/manual/plugins/windowmessage/">WindowMessage</a>
+		<li><a href="/manual/plugins/deprecated/">Deprecated Plugins</a>
+			<ul>
+			<li><a href="/manual/plugins/deprecated/advancedcpu/">AdvancedCPU</a>
+			<li><a href="/manual/plugins/deprecated/itunes/">iTunes</a>
+			<li><a href="/manual/plugins/deprecated/perfmon/">PerfMon</a>
+			</ul>
+		</ul>
+	<li><a href="/manual/bangs/">Bangs</a>
+	<li><a href="/manual/formulas/">Formulas</a>
+	<li><a href="/manual/variables/">Variables</a>
+		<ul>
+		<li><a href="/manual/variables/nesting-variables/">Nesting Variables</a>
+		<li><a href="/manual/variables/built-in-variables/">Built-In Variables</a>
+		<li><a href="/manual/variables/section-variables/">Section Variables</a>
+		<li><a href="/manual/variables/character-variables/">Character Variables</a>
+		<li><a href="/manual/variables/mouse-variables/">Mouse Variables</a>
+		</ul>
+	<li><a href="/manual/groups/">Groups</a>
+	<li><a href="/manual/mouse-actions/">Mouse Actions</a>
+	<li><a href="/manual/lua-scripting/">Lua Scripting</a>
+		<ul>
+		<li><a href="/manual/lua-scripting/inline-lua/">Inline Lua</a>
+		</ul>
+	</ul>
+
+	<h4>More</h4>
+	<ul class="docs-nav-block">
+	<li><a href="/tips/">Tips &amp; Tricks</a>
+	<li><a href="/snippets/">Snippets</a>
+	<li><a href="/developers/">Developers</a>
+	<li><a href="/history/">Version History</a>
+	</ul>
+
+</nav>
+
+      </div>
+
+      <!-- Content -->
+      <div class="docs-content col-12 col-lg-9">
+        <h1 class="page-title">[Rainmeter] section</h1>
+        <hr />
+        <!-- Include content and Replace "!" in every url with correct path -->
+        <p>The [Rainmeter] section of a skin defines options for the entire skin.</p>
+
+<div class="alert alert-info alert-tight" role="alert">
+	<h2 class="alert-heading h5" id="Notes"><i class="fa-solid fa-thumbtack"></i> Note:</h2>
+	<p>The [Rainmeter] section does not support <a href="/manual/variables/#DynamicVariables">Dynamic Variables</a> or changes using the <a href="/manual/bangs/#SetOption">!SetOption</a> bang, with the exception of custom <a href="#Context">Context menu</a> items.</p>
+</div>
+
+<h2 id="General">General Options</h2>
+<dl>
+	<dt id="Update"><code>Update</code> <small>Default: <code>1000</code></small></dt>
+	<dd>
+		<p>Defines the update interval of the skin in milliseconds. On each update, measures and meters are updated, and the skin is redrawn.</p>
+
+		<p>The lowest possible effective value for Update is "16". Some care should be taken to only use very low update rates (less than 100) when really needed, and to balance a low Update with <a href="#DefaultUpdateDivider">DefaultUpdateDivider</a>, or <a href="/manual/measures/general-options/#UpdateDivider">UpdateDivider</a> on individual measures and meters, in order to keep the CPU usage by Rainmeter as low as possible.</p>
+
+		<p>Using <code>Update=-1</code> will update the skin only once on load (or on refresh). This is a good option when a skin is strictly controlled by mouse actions, like an application menu or launcher. The skin will never update, but will always react to any <a href="/manual/mouse-actions/">mouse actions</a>, where you can use <a href="/manual/bangs/#UpdateMeter">!UpdateMeter</a> and <a href="/manual/bangs/#Redraw">!Redraw</a> to control when the skin is updated and redrawn.</p>
+
+		<p><b>Note:</b> While <code>Update=1000</code> will update the skin "once a second",  Update is not related to the system clock, and if a computer is busy or a complicated skin takes longer than the interval to complete a full update of the skin, updates can be unreliable in relation to elapsed time. Do not use the Update value to control clocks or other timing sensitive functions.</p>
+	</dd>
+
+	<dt id="DefaultUpdateDivider"><code>DefaultUpdateDivider</code> <small>Default: <code>1</code></small></dt>
+	<dd>
+		<p>Default number of updates at which skin measure and meter values are updated. The <a href="#Update">Update</a> option is multiplied by the specified value to determine how often measures and meters are updated.
+
+		<p>Example: If <code>Update=1000</code> and <code>DefaultUpdateDivider=30</code>, then by default all measures and meters are updated every 30 seconds.</p>
+
+		<p>If <code>DefaultUpdateDivider=-1</code> or any negative number, then by default all measures and meters are only updated once when the skin is loaded or refreshed. This is a good option when a skin is mostly controlled by mouse actions, like an application menu or launcher. The skin will never update, but will always react to any <a href="/manual/mouse-actions/">mouse actions</a>, where you can use <a href="/manual/bangs/#UpdateMeter">!UpdateMeter</a> and <a href="/manual/bangs/#Redraw">!Redraw</a> to control when the skin is updated and redrawn.</p>
+
+		<p><b>Note:</b> This option is designed to set a default UpdateDivider for all measures and meters in the skin. It can be overridden by setting <code>UpdateDivider</code> on individual measures or meters. This option should be used when a low <code>Update</code> is desired to support animations or other skin elements requiring rapid update, while avoiding having to manually set an UpdateDivider on a great many other measures and meters that do not need to be updated as quickly.</p>
+	</dd>
+
+	<dt id="AccurateText"><code>AccurateText</code> <small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>If set to <code>1</code>, String meters are measured and rendered using improved padding and character spacing similar to that provided by Direct2D.</p>
+	</dd>
+
+	<dt id="DynamicWindowSize"><code>DynamicWindowSize</code> <small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>If set to <code>1</code>, the window size is adjusted on each update to fit the meters.</p>
+	</dd>
+
+	<dt id="SkinWidthHeight"><code>SkinWidth</code>, <code>SkinHeight</code> <small>Default: <em>None</em></small></dt>
+	<dd>
+		<p>Either or both may be set. This will set and constrain the skin to the fixed dimensions defined, either the width, the height, or both. Any meter or part of a meter positioned outside the defined boundaries will be truncated. DynamicWindowSize will be ignored for the defined dimension(s), and meters that would normally display even "outside" the skin will be truncated by the fixed skin dimension(s).</p>
+		<p><b>Note:</b> If the setting is missing entirely (none) or set to <code>0</code> it has no effect.</p>
+	</dd>
+
+	<dt id="DragMargins"><code>DragMargins</code> <small>Default: <code>0,0,0,0</code></small></dt>
+	<dd>
+		<p>Uses 4 values (left, top, right, bottom) separated by commas to define the area from where the window can be dragged. The values define a margin of non-draggable area. It's also possible to use negative numbers in which case the margin is calculated from the opposite side. E.g. <code>DragMargins=0,-100,0,0</code>.</p>
+	</dd>
+
+	<dt id="OnRefreshAction"><code>OnRefreshAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute when the skin is loaded or refreshed.</p>
+		<p><b>Note:</b> The action(s) defined will take place at the very end of the first update cycle. Changes made will generally not be visible until the next update, unless bangs are used to update desired measures and meters and redraw the skin.</p>
+	</dd>
+
+	<dt id="OnUpdateAction"><code>OnUpdateAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute on each <a href="#Update">Update</a> of the skin.</p>
+		<p><b>Note:</b> The action(s) defined will take place at the very end of the update cycle. Changes made will generally not be visible until the next update, unless bangs are used to update desired measures and meters and redraw the skin.</p>
+	</dd>
+
+	<dt id="OnCloseAction"><code>OnCloseAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute when the skin is unloaded or when Rainmeter is closed.</p>
+	</dd>
+
+	<dt id="OnFocusAction"><code>OnFocusAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute when the skin receives focus in Windows (focus is given when the mouse is clicked on the skin).</p>
+		<p><b>Note:</b> The action(s) defined will take place at the very end of the update cycle. Changes made will generally not be visible until the next update, unless bangs are used to update desired measures and meters and redraw the skin.</p>
+	</dd>
+
+	<dt id="OnUnfocusAction"><code>OnUnfocusAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute when the skin loses focus in Windows (focus is lost when the mouse is clicked outside the skin).</p>
+		<p><b>Note:</b> The action(s) defined will take place at the very end of the update cycle. Changes made will generally not be visible until the next update, unless bangs are used to update desired measures and meters and redraw the skin.</p>
+	</dd>
+
+	<dt id="OnWakeAction"><code>OnWakeAction</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> to execute when Windows returns from the sleep or hibernate states.</p>
+		<p><b>Note:</b> The action(s) defined will take place at the very end of the first update cycle. Changes made will generally not be visible until the next update, unless bangs are used to update desired measures and meters and redraw the skin.</p>
+	</dd>
+
+	<dt id="TransitionUpdate"><code>TransitionUpdate</code> <small>Default: <code>100</code></small></dt>
+	<dd>
+		<p>Defines the update time in milliseconds for meter transitions. While a transition is active the meter will update at this rate. Currently, only the <a href="/manual/meters/bitmap/#BitmapTransitionFrames">Bitmap</a> meter supports meter transitions.</p>
+	</dd>
+
+	<dt id="ToolTipHidden"><code>ToolTipHidden</code><small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>If set to <code>1</code>, all tooltips in the skin will be hidden. More information on <a href="/manual/meters/general-options/tooltips/">tooltips</a>.</p>
+	</dd>
+
+	<dt id="Group"><code>Group</code></dt>
+	<dd>
+		<p>Defines a group or series of groups that the skin belongs to. For more information please see the <a href="/manual/groups/">Groups</a> page.</p>
+	</dd>
+</dl>
+
+	<dt id="SelectedColor"><code>SelectedColor</code><small>Default: <code>(see below)</code></small></dt>
+	<dd>
+		<p>A <a href="/manual/skins/option-types/#Color">color code</a> used to define the color and transparency of the overlay when a skin is selected in a <a href="/manual/arranging-skins/#Multiple">Drag Group</a>. If this option is not defined, the default setting <a href="/manual/settings/rainmeter-section/#SelectedColor">SelectedColor</a> option is used.</p>
+		<p><b>Note:</b> This option will override any default <a href="/manual/settings/rainmeter-section/#SelectedColor">SelectedColor</a>.</p>
+	</dd>
+
+	<dt id="DragGroup"><code>DragGroup</code></dt>
+	<dd>
+		<p>A group or series of <a href="/manual/arranging-skins/#Multiple">Drag Groups</a> that the skin belongs to. So if any skin is selected, any skins in the same DragGroup will automatically be selected as well.</p>
+	</dd>
+</dl>
+
+<h2 id="BackgroundOptions">Background options</h2>
+<dl>
+	<dt>General image options</dt>
+	<dd>
+		<p>All <a href="/manual/meters/general-options/image-options/">general image options</a> are valid for <code>Background</code>.</p>
+	</dd>
+
+	<dt id="Background"><code>Background</code></dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Path">Path</a> of a background image file.</p>
+	</dd>
+
+	<dt id="BackgroundMode"><code>BackgroundMode</code> <small>Default: <code>1</code></small></dt>
+	<dd>
+		<p>Defines the background mode for the skin. Valid values are:
+		<ul>
+		<li><code>0</code> : Image as defined by <code>Background</code></li>
+		<li><code>1</code> : Transparent background</li>
+		<li><code>2</code> : Fill with a solid color</li>
+		<li><code>3</code> : Fill by scaling image as defined by <code>Background</code></li>
+		<li><code>4</code> : Fill by tiling image as defined by <code>Background</code></li>
+		</ul></p>
+		<p><code>BackgroundMode=2</code> : The <a href="/manual/skins/option-types/#Color">color</a> is set by adding a <a href="/manual/meters/general-options/#SolidColor">SolidColor</a> option.</p>
+	</dd>
+
+	<dt id="BackgroundMargins"><code>BackgroundMargins</code> <small>Default: <code>0,0,0,0</code></small></dt>
+	<dd>
+		<p>If <code>BackgroundMode=3</code>, defines margins of the <code>Background</code> image that are not scaled. The parameters are <code>left,top,right,bottom</code>.</p>
+		<p><b>Example:</b> <code>BackgroundMargins=0,10,0,20</code>.
+		<br>10 pixels from the top and 20 pixels from the bottom of the image are not scaled.</p>
+	</dd>
+
+	<dt id="SolidColor"><code>SolidColor</code>, <code>SolidColor2</code> <small>Default: <code>128,128,128,255</code></small></dt>
+	<dd>
+		<p>This option will specify the background <a href="/manual/skins/option-types/#Color">color</a> when <code>BackgroundMode=2</code>. If <code>SolidColor2</code> is also specified, the background is a <a href="#GradientAngle">gradient</a> composed of <code>SolidColor</code> and <code>SolidColor2</code>.</p>
+
+		<p><b>Hint:</b> <code>SolidColor=0,0,0,1</code> can be used to make transparent areas of the background clickable.</p>
+	</dd>
+
+	<dt id="GradientAngle"><code>GradientAngle</code></dt>
+	<dd>
+		<p>Angle of the gradient in degrees (for <code>SolidColor</code> and <code>SolidColor2</code>) when <code>BackgroundMode=2</code>.</p>
+	</dd>
+
+	<dt id="BevelType"><code>BevelType</code> <small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>If enabled, draws a bevel around the edges of the entire skin when <code>BackgroundMode=2</code>. Valid values are:
+		<ul>
+		<li><code>0</code>: No bevel</li>
+		<li><code>1</code>: Raised</li>
+		<li><code>2</code>: Sunken</li>
+		</ul></p>
+	</dd>
+
+	<dt id="BevelColor"><code>BevelColor</code>, <code>BevelColor2</code></dt>
+	<dd>
+		<p>If <code>BevelType</code> is set to other than zero, allows setting the colors for the top/left and bottom/right bevels.</p>
+		<p>For <code>BevelType=1</code>, the BevelColor will represent the color on the left and top edges of the skin. BevelColor2 will represent the colors on the right and bottom of the skin.</p>
+		<p>For <code>BevelType=2</code>, the BevelColor will represent the color on the right and bottom edges of the skin. BevelColor2 will represent the colors on the left and top of the skin.</p>
+	</dd>
+</dl>
+
+<h2 id="Context">Context options</h2>
+
+<dl>
+	<dt id="ContextTitle"><code>ContextTitle</code>, <code>ContextTitle2</code>, <code>ContextTitle3</code>... </dt>
+	<dd>
+		<p>If not blank, adds an item to the skin's <a href="/manual/user-interface/context-menus/">context menu</a> under "Custom skin actions". Up to 25 <em>ContextTitleN</em> options are allowed, with up to 30 characters per option. Additional characters are truncated with an ellipsis (<code>...</code>). If more than 3 <em>ContextTitleN</em> options are given, "Custom skin actions" becomes a submenu. If a <em>ContextTitleN</em> option is not valid, all subsequent <em>ContextTitleN</em> options are ignored. In addition, if more than 3 options are given, and the value of <em>ContextTitleN</em> includes only dashes (<code>-</code>), the item is displayed as a separator.</p>
+
+		<p><b>Note:</b> Variables in <code>ContextTitleN</code> are always <a href="/manual/variables/#DynamicVariables">dynamic</a>. Variable values are read at the time the context menu is opened. This means that the <a href="/manual/bangs/#SetOption">!SetOption</a> bang can be used to change these values.</p>
+	</dd>
+
+	<dt id="ContextAction"><code>ContextAction</code>, <code>ContextAction2</code>, <code>ContextAction3</code>... </dt>
+	<dd>
+		<p><a href="/manual/skins/option-types/#Action">Action</a> triggered by clicking the corresponding <a href="#ContextTitle">ContextTitleN</a> item. <em>ContextActionN</em> is required for <em>ContextTitleN</em> to be valid, unless the item is a separator.</p>
+
+		<p><b>Note:</b> Variables in <code>ContextActionN</code> are always <a href="/manual/variables/#DynamicVariables">dynamic</a>. Variable values are read at the time the context menu is opened. This means that the <a href="/manual/bangs/#SetOption">!SetOption</a> bang can be used to change these values.</p>
+	</dd>
+</dl>
+
+<h2 id="AeroBlur">Aero Blur options</h2>
+<dl>
+	<dt id="Blur"><code>Blur</code> <small>Default: <code>0</code></small></dt>
+	<dd>
+		<p>Set to 1 to enable Aero Blur on the Windows 7 operating system. If no BlurRegions are specified, the entire skin background is blurred.</p>
+		<p><b>Note:</b> The function will not work on Window 8.1 or Windows 10.</p>
+	</dd>
+
+	<dt id="BlurRegion"><code>BlurRegion, BlurRegion2, ..., BlurRegion<em>N</em></code></dt>
+	<dd>
+		<p>Defines areas and shapes of the one or more regions of the skin to be blurred. The format of the option is: <code>BlurRegion=Type, TopX, TopY, BottomX, BottomY <em>,Radius</em></code>.</p>
+		<p>Valid values for <code>Type</code> are:
+		<ul>
+		<li><code>0</code> : Region is disabled</li>
+		<li><code>1</code> : Rectangular region</li>
+		<li><code>2</code> : Rectangular region with rounded corners (requires <code>Radius</code>)</li>
+		<li><code>3</code> : Elliptical region</li>
+		</ul></p>
+		<p>The parameters following <code>Type</code> define the size and shape of the region. They are, in order:
+		<ul>
+		<li><code>TopX</code> : Top left horizontal point in the skin</li>
+		<li><code>TopY</code> : Top left vertical point in the skin</li>
+		<li><code>BottomX</code> : Bottom right horizontal point in the skin</li>
+		<li><code>BottomY</code> : Bottom right vertical point in the skin</li>
+		<li><code>Radius</code> : Radius of the corners of rounded rectangles (required for <code>Type=2</code>)</li>
+		</ul></p>
+	</dd>
+	<br><p><b>Note:</b> Aero Blur options can be dynamically controlled with several <a href="/manual/bangs/#ShowHideToggleBlur">bangs</a>.</p>
+	<h3>Example</h3>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[Rainmeter]</span></span><br><span class="line"><span class="attr">Update</span>=<span class="number">1000</span></span><br><span class="line"><span class="attr">Blur</span>=<span class="number">1</span></span><br><span class="line"><span class="attr">BlurRegion</span>=<span class="number">1</span>,<span class="number">10</span>,<span class="number">10</span>,<span class="number">190</span>,<span class="number">50</span></span><br><span class="line"><span class="comment">; BlurRegion creates a rectangle starting at 10 pixels from the left, 10 pixels down from the top, and ending at 190 pixels to the right, 50 pixels from the top.</span></span><br><span class="line"></span><br><span class="line"><span class="attr">BlurRegion2</span>=<span class="number">3</span>,<span class="number">10</span>,<span class="number">70</span>,<span class="number">80</span>,<span class="number">110</span></span><br><span class="line"><span class="attr">BlurRegion3</span>=<span class="number">2</span>,<span class="number">10</span>,<span class="number">130</span>,<span class="number">190</span>,<span class="number">170</span>,<span class="number">15</span></span><br><span class="line"></span><br><span class="line"><span class="section">[Background]</span></span><br><span class="line"><span class="attr">Meter</span>=Image</span><br><span class="line"><span class="attr">W</span>=<span class="number">200</span></span><br><span class="line"><span class="attr">H</span>=<span class="number">180</span></span><br><span class="line"><span class="attr">SolidColor</span>=<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">50</span></span><br><span class="line"><span class="attr">LeftMouseUpAction</span>=[!AddBlur <span class="string">&quot;1,0,0,200,80&quot;</span>]</span><br></pre></td></tr></table></figure>
+</dl>
+
+<h2 id="Deprecated">Deprecated options</h2>
+<dl>
+	<dt id="Author"><code>Author</code></dt>
+	<dd>
+		<p>The author of the skin.</p>
+		<p><b>Note:</b> This option is deprecated. Author should be defined in the <a href="/manual/skins/metadata-section/">[Metadata]</a> section of the skin.</p>
+	</dd>
+
+	<dt id="AppVersion"><code>AppVersion</code></dt>
+	<dd>
+		<p>Defines the minimum version of Rainmeter required to use the skin. The formula to calculate the value is: <code>major * 1000000 + minor1 * 1000 + minor2</code>.</p>
+		<p><b>Note:</b> This option is deprecated. Use the version capabilities in <a href="/manual/publishing-skins/">Skin Packager</a>.</p>
+	</dd>
+
+	<dt id="LocalFont"><code>LocalFont</code>, <code>LocalFont2</code>, ...</dt>
+	<dd>
+		<p>Loads the specified TTF font files for use with <a href="/manual/meters/string/#FontFace">FontFace</a> in String meters.</p>
+		<p><b>Note:</b> This option is deprecated. Use the <a href="/manual/skins/resources-folder/#Fonts">@Resources\Fonts</a> folder instead.</p>
+	</dd>
+</dl>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Include Footer -->
+<footer id="footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-6">© 2026 Rainmeter Team</div>
+      <div class="col-6 text-right"><button id="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> <span>Light theme</span></button></div>
+    </div>
+  </div>
+</footer>
+
+
+
+	<!-- Javascript files  -->
+	<script src="/js/main.js?v=0b0053a2"></script>
+	<script src="/js/jquery-3.2.1.slim.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	<script src="/js/ahk-sliding-panel.js"></script>
+	<script src="/js/jquery.fancybox.min.js"></script>
+
+	<!-- Script for the slideout menu on mobile -->
+	<script>
+		// set slideout menu variables
+		var docsnav = new ahk_slideout({
+		  id: "menu",
+		  side: "left",
+		  width: "18rem",
+		  touch_boundary: "50",
+		  slide_time: "0.2"
+		})
+
+		// function to toggle menu
+		function openNavMenu() {
+		  docsnav.openMenu()
+		}
+		// function to close menu
+		function closeNavMenu() {
+		  docsnav.closeMenu()
+		}
+
+		// when scrolling below 90, add sticky class to nav-button
+		$(function() {
+		  var header = $("#nav-button");
+		  $(window).scroll(function() {
+		    var scroll = $(window).scrollTop();
+		    if (scroll >= 90) {
+		      header.addClass("sticky");
+		    } else {
+		      header.removeClass("sticky");
+		    }
+		  });
+		});
+	</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a454ac596e44bea2',t:'MTc5MTEyMjAxMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
