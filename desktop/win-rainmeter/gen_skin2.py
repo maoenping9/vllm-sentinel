@@ -288,7 +288,8 @@ def emit(outdir, base):
         add(f"Y={yy}")
         style = kw.pop("style", None)
         if style:
-            add(f"MeterStyle={style}")
+            # 注意：Rainmeter 多样式分隔符是竖线，逗号会被当成一个不存在的样式名
+            add("MeterStyle=" + " | ".join(x.strip() for x in style.split(",")))
         if meter == "Bar":
             add(f"MeasureName={kw.pop('measure')}")
             add("BarOrientation=Horizontal")

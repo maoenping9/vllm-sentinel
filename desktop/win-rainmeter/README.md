@@ -68,6 +68,7 @@ python3 verify_skin.py  build/vLLMSentinel/vLLMSentinel.ini     # 正则实测 +
 | `SectionParser=` / `SectionIndex=` | 不存在 | 子度量 `Measure=WebParser` + `URL=[父]` + `StringIndex=N` |
 | `FontFamily=` | 字符串 meter 没这个选项 | `FontFace=` |
 | 单个亲度量塞 154 个捕获组 | WebParser 上限 99 个 StringIndex | 拆成两个亲度量（本项目 top/gpu 各 81） |
+| `MeterStyle=A,B,C`（逗号分隔） | 文档明确规定多样式用**竖线**分隔，逗号会让整串被当成一个不存在的样式名 → 样式静默全失效（右对齐失效、字号回落默认 → 行间看起来"错行"、数值窜出卡片） | `MeterStyle=A \| B \| C` |
 | 右对齐列同时给 `X` 和 `W` | `StringAlign=Right` 时 X 是右边界，W 的裁剪框语义有歧义 | 右对齐只给 X（在服务端限长）；左对齐才用 W+ClipString |
 | 样式节里写 `X=`/`Y=` | 虽则 Meter 自身优先，但极易误判（v1 曾误诊在此） | 样式节只放字体/颜色 |
 

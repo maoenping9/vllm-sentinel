@@ -77,10 +77,13 @@ def check_refs(secs: dict[str, dict[str, str]]) -> None:
                     fail(f"[{name}] {key} 引用了不存在的度量 [{ref}]")
             if key == "MeasureName" and val not in known:
                 fail(f"[{name}] MeasureName={val} 不存在")
-            if key in ("MeterStyle",):
-                for s in val.split(","):
-                    if s.strip() and s.strip() not in known:
-                        fail(f"[{name}] MeterStyle 引用不存在的样式 [{s.strip()}]")
+            if key == "MeterStyle":
+                if "," in val:
+                    fail(f"[{name}] MeterStyle 用了逗号（Rainmeter 要求竖线 | 分隔）：{val}")
+                for s in val.split("|"):
+                    s = s.strip()
+                    if s and s not in known:
+                        fail(f"[{name}] MeterStyle 引用不存在的样式 [{s}]")
 
 
 def check_coords(secs: dict[str, dict[str, str]], card_w: int) -> None:

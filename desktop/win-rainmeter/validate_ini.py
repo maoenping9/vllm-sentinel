@@ -52,6 +52,21 @@ def load_whitelist():
     return wh
 
 
+def check_meterstyle(secs):
+    """多样式必须用竖线分隔（文档：separated by pipes）；逗号会静默失效。"""
+    for name, kv in secs.items():
+        val = kv.get("MeterStyle")
+        if not val:
+            continue
+        if "," in val:
+            yield f"[{name}] MeterStyle 用了逗号分隔（Rainmeter 要求竖线 |）：{val}"
+            continue
+        for part in val.split("|"):
+            part = part.strip()
+            if part and part not in secs:
+                yield f"[{name}] MeterStyle 引用不存在的样式 [{part}]"
+
+
 def sections(ini_text):
     cur, out = None, []
     for line in ini_text.split("\n"):
@@ -129,6 +144,11 @@ def main():
         for k, v in kv:
             if k not in allowed:
                 bad.append(f"[{name}] 未知选项 {k}={v[:40]}")
+    for name, kv in sections(open(ini, encoding="utf-8").read()):
+        pass
+    secs_map = {n: dict(kv) for n, kv in sections(open(ini, encoding="utf-8").read())}
+    for msg in check_meterstyle(secs_map):
+        bad.append(msg)
     if bad:
         print(f"❌ {len(bad)} 处问题：")
         seen = {}
