@@ -41,11 +41,12 @@ BAR_TROUGH = "58,58,58,255"    # 进度条底槽
 ACCENT_FALLBACK = "76,194,255,255"   # 系统强调色读取失败时使用（Win11 默认蓝）
 
 # ---------------- 字段顺序表（与 build_skin_payload 一一对应）----------------
-# TOP 81 值：0 标题 | 1 状态文字 | 2 状态色 | 3 模型表头
+# TOP 86 值：0 标题 | 1 状态文字 | 2 状态色 | 3 模型表头
 #   4..35  模型 8 行 × (名称, 明细, 名称色, 状态点色)
 #   36..67 CPU 8 行 × (标签, 数值, 数值色, 条百分比)
 #   68..79 额度 3 行 × (标签, 数值, 数值色, 条百分比)
 #   80 页脚
+#   81..85（0-based）= 82..86（StringIndex）：卡片上端 / 下端 / 描边 / 底槽 / 分隔线
 # GPU 81 值：0 表头 | 1..80 GPU 16 行 × (标签, 显存, 元信息, 负载%, 条色)
 T_TITLE, T_STAT, T_STATC, T_MHDR = 1, 2, 3, 4
 T_MODEL = 5        # 模型块起始 StringIndex
@@ -55,10 +56,12 @@ KV_N = 8
 T_QUOTA = T_KV + KV_N * 4              # 69
 QUOTA_N = 3
 T_FOOTER = T_QUOTA + QUOTA_N * 4       # 81
+# 82..86：卡片外观色（按主题给，皮肤不判断主题配色）
+T_CARD_TOP, T_CARD_BOTTOM, T_BORDER, T_TROUGH, T_DIVIDER = 82, 83, 84, 85, 86
 G_HDR = 1
 G_GPU = 2
 GPU_N = 16
-TOP_LEN = T_FOOTER                     # 81
+TOP_LEN = T_DIVIDER                    # 86
 GPU_LEN = G_GPU - 1 + GPU_N * 5        # 81
 
 
@@ -77,8 +80,10 @@ def verify(base):
         problems.append(f"gpu 字段数 {len(gpu)} != {GPU_LEN}")
     if top and top[0] != "vLLM SENTINEL":
         problems.append(f"top[0] 期望标题，实得 {top[0]!r}")
-    if top and not top[-1].startswith("点击打开控制台"):
-        problems.append(f"top[-1] 期望页脚，实得 {top[-1]!r}")
+    if top and not top[T_FOOTER - 1].startswith("点击打开控制台"):
+        problems.append(f"top[{T_FOOTER - 1}] 期望页脚，实得 {top[T_FOOTER - 1]!r}")
+    if top and "," not in top[T_CARD_TOP - 1]:
+        problems.append(f"top[{T_CARD_TOP - 1}] 期望卡片色，实得 {top[T_CARD_TOP - 1]!r}")
     if gpu and "GPU ×" not in gpu[0]:
         problems.append(f"gpu[0] 期望表头，实得 {gpu[0]!r}")
     for i, s in enumerate(top + gpu):
@@ -117,11 +122,7 @@ def emit(outdir, base):
     add(f"; 唯一需要改的配置：服务器地址（EasyTier 内网 your-server-ip + 控制台端口 8889）")
     add(f"SERVER={SERVER_DEFAULT}")
     add(f"REFRESH_SEC={REFRESH_SEC}")
-    add("; 配色（想微调只改这几行）：卡片渐变两端 / 圆角描边 / 进度条底槽")
-    add(f"BG_TOP={BG_1}")
-    add(f"BG_BOTTOM={BG_2}")
-    add(f"BORDER={BORDER}")
-    add(f"TROUGH={BAR_TROUGH}")
+    add("; 卡片配色由服务端按系统主题（dark/light）给全，这里不用配")
     add("; 系统强调色自动读取（注册表 HKCU/Software/Microsoft/Windows/DWM/AccentColor）；读不到就用下面这个兜底色")
     add(f"ACCENT_FALLBACK={ACCENT_FALLBACK}")
     add("; 字体：想换字体只改这一行（如 Segoe UI Variable Text / 微软雅黑 / HarmonyOS Sans）")
@@ -152,7 +153,8 @@ def emit(outdir, base):
     def parent(name, part, n):
         add(f"[{name}]")
         add("Measure=WebParser")
-        add(f"URL=#SERVER#/api/skin?part={part}")
+        add(f"URL=#SERVER#/api/skin?part={part}&theme=[&msTheme]")
+        add("DynamicVariables=1")
         add("UpdateDivider=6")
         add("UpdateRate=1")
         add(f"RegExp=(?si)\"v\":\\[" + ",".join(['"(.*?)"'] * n) + "\\]")
@@ -199,6 +201,15 @@ def emit(outdir, base):
     add("DynamicVariables=1")
     add("")
 
+    add("; ---------------- 系统主题（浅色/深色）→ 作为 theme 参数上报服务端 ----------------")
+    add("[msTheme]")
+    add("Measure=Registry")
+    add("RegHKey=HKEY_CURRENT_USER")
+    add("RegKey=Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize")
+    add("RegValue=AppsUseLightTheme")
+    add('OnChangeAction=[!CommandMeasure "WebTop" "Update"][!CommandMeasure "WebGpu" "Update"]')
+    add("")
+
     parent("WebTop", "top", TOP_LEN)
     parent("WebGpu", "gpu", GPU_LEN)
 
@@ -230,7 +241,7 @@ def emit(outdir, base):
     y += 24
     m_line("ModelsHeader", "String", M, y, text=f"[&t{T_MHDR:02d}]", style="StyleBase,StyleSec")
     y += 20
-    m_line("DivModels", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
+    m_line("DivModels", "Image", M, y - 6, w=CONTENT, h=1, solid=f"[&t{T_DIVIDER:02d}]")
 
     # 模型行
     name_x, name_w = M + 13, 148
@@ -248,7 +259,7 @@ def emit(outdir, base):
     # GPU 表头 + 阵列
     m_line("GpuHeader", "String", M, y, text=f"[&g{G_HDR:02d}]", style="StyleBase,StyleSec")
     y += 20
-    m_line("DivGpu", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
+    m_line("DivGpu", "Image", M, y - 6, w=CONTENT, h=1, solid=f"[&t{T_DIVIDER:02d}]")
     g_lbl_x, g_lbl_w = M, 112
     g_mem_x, g_mem_w = M + 114, 42
     g_bar_x, g_bar_w = M + 162, 96
@@ -269,7 +280,7 @@ def emit(outdir, base):
     # CPU 块（带条的行走 Bar）
     m_line("CpuHeader", "String", M, y, text="CPU 综合", style="StyleBase,StyleSec")
     y += 20
-    m_line("DivCpu", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
+    m_line("DivCpu", "Image", M, y - 6, w=CONTENT, h=1, solid=f"[&t{T_DIVIDER:02d}]")
     kv_bar_rows = {1, 2, 5, 8}          # 与服务器字段顺序对应：总使用率/内存/最高单核/整机功耗
     k_lbl_x, k_lbl_w = M, 108
     k_bar_x, k_bar_w = M + 116, 150
@@ -288,7 +299,7 @@ def emit(outdir, base):
     # 电费 / 流量额度
     m_line("QuotaHeader", "String", M, y, text="电费 / 流量额度", style="StyleBase,StyleSec")
     y += 20
-    m_line("DivQuota", "Image", M, y - 6, w=CONTENT, h=1, solid="255,255,255,22")
+    m_line("DivQuota", "Image", M, y - 6, w=CONTENT, h=1, solid=f"[&t{T_DIVIDER:02d}]")
     for i in range(QUOTA_N):
         base_i = T_QUOTA + i * 4
         yy = y + i * ROW_QUOTA
@@ -312,8 +323,9 @@ def emit(outdir, base):
     add("Y=0")
     add(f"W={CARD_W}")
     add(f"H={card_h}")
-    add("SolidColor=#BG_TOP#")
-    add("SolidColor2=#BG_BOTTOM#")
+    add(f"SolidColor=[&t{T_CARD_TOP:02d}]")
+    add(f"SolidColor2=[&t{T_CARD_BOTTOM:02d}]")
+    add("DynamicVariables=1")
     add("GradientAngle=90")
     add("")
     add("[AccentSpine]")
@@ -329,7 +341,8 @@ def emit(outdir, base):
     add("Meter=Shape")
     add("X=0")
     add("Y=0")
-    add(f"Shape=Rectangle 0.5,0.5,{CARD_W - 1},{card_h - 1},7 | StrokeWidth 1 | Stroke Color #BORDER# | Fill Color 0,0,0,0")
+    add(f"Shape=Rectangle 0.5,0.5,{CARD_W - 1},{card_h - 1},7 | StrokeWidth 1 | Stroke Color [&t{T_BORDER:02d}] | Fill Color 0,0,0,0")
+    add("DynamicVariables=1")
     add("")
     add("[ClickZone]")
     add("Meter=Image")
@@ -354,7 +367,7 @@ def emit(outdir, base):
             add(f"MeasureName={kw.pop('measure')}")
             add("BarOrientation=Horizontal")
             add(f"BarColor={kw.pop('barcolor')}")
-            add("SolidColor=#TROUGH#")
+            add(f"SolidColor=[&t{T_TROUGH:02d}]")
         if "w" in kw:
             add(f"W={kw.pop('w')}")
         if "h" in kw:
@@ -373,7 +386,8 @@ def emit(outdir, base):
             add(f"Text={kw.pop('text')}")
         if kw:
             raise SystemExit(f"{name} 有未处理选项 {kw}")
-        if meter in ("String", "Bar"):
+        # 只要有动态色值引用（[&tXX] / [&AccentC]）就必须开 DynamicVariables
+        if meter in ("String", "Bar", "Image", "Shape"):
             add("DynamicVariables=1")
         add("")
 

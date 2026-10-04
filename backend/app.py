@@ -364,11 +364,12 @@ async def summary():
 
 
 @app.get("/api/skin")
-async def skin(part: str = "top"):
+async def skin(part: str = "top", theme: str = "dark"):
     """Rainmeter 皮肤专用：固定顺序的值数组（规避 WebParser 99 个 StringIndex 上限与键序耦合）。
-    part=top（表头/模型/CPU/额度/页脚）| part=gpu（GPU 阵列）。见 summary.py 顶部说明。"""
+    part=top（表头/模型/CPU/额度/页脚/卡片色）| part=gpu（GPU 阵列）；theme=dark|light 决定整套配色。
+    见 summary.py::build_skin_payload。"""
     energy_data = await asyncio.to_thread(_cumulative_energy)
-    return build_skin_payload(state, energy_data, "gpu" if part == "gpu" else "top")
+    return build_skin_payload(state, energy_data, "gpu" if part == "gpu" else "top", theme)
 
 
 @app.get("/api/stream")

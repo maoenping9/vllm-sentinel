@@ -419,19 +419,43 @@ def build_summary(state: dict[str, Any], energy: dict[str, Any]) -> dict[str, An
 # 「固定顺序的值数组」，客户端只按序号取，配色/单位/取整这些展示语义仍在服务端算。
 # 每个部分的长度必须 ≤ 99（TOP=81，GPU=81），新增字段要同步 gen_skin2.py 的 FIELD 表。
 # ---------------------------------------------------------------------------
-SKIN_PALETTE = ["78,156,255", "52,211,153", "245,158,11", "167,139,250", "244,114,182", "34,211,238"]
-SKIN_IDLE = "100,116,139"
-SKIN_HOT = "239,68,68"
-SKIN_BG = "13,19,33"
-SKIN_TEXT = "226,232,240"
-SKIN_DIM = "148,163,184"
-SKIN_WARN = "245,184,58"
-SKIN_CRIT = "239,68,68"
-SKIN_OK = "126,226,168"
-SKIN_ACCENT = "110,140,255"
+SKIN_THEMES: dict[str, dict[str, Any]] = {
+    "dark": {
+        "palette": ["78,156,255", "52,211,153", "245,158,11", "167,139,250", "244,114,182", "34,211,238"],
+        "idle": "100,116,139", "hot": "239,68,68", "blank": "32,32,32",
+        "text": "255,255,255", "warn": "245,184,58", "crit": "239,68,68", "ok": "126,226,168",
+        "accent": "110,140,255",
+        "card_top": "32,32,32,255", "card_bottom": "41,41,41,255",
+        "border": "70,70,70,255", "trough": "58,58,58,255", "divider": "255,255,255,22",
+    },
+    "light": {
+        "palette": ["30,110,210", "16,150,110", "186,105,0", "120,90,220", "205,70,140", "10,150,170"],
+        "idle": "128,128,128", "hot": "200,40,40", "blank": "246,246,246",
+        "text": "26,26,26", "warn": "175,100,0", "crit": "196,36,36", "ok": "16,130,80",
+        "accent": "0,105,200",
+        "card_top": "250,250,250,255", "card_bottom": "240,240,240,255",
+        "border": "214,214,214,255", "trough": "226,226,226,255", "divider": "0,0,0,20",
+    },
+}
+# 兼容旧名（dark 主题的副本，供别处继续引用）
+SKIN_PALETTE = SKIN_THEMES["dark"]["palette"]
+SKIN_IDLE = SKIN_THEMES["dark"]["idle"]
+SKIN_HOT = SKIN_THEMES["dark"]["hot"]
+SKIN_BG = SKIN_THEMES["dark"]["blank"]
+SKIN_TEXT = SKIN_THEMES["dark"]["text"]
+SKIN_DIM = SKIN_THEMES["dark"]["text"]
+SKIN_WARN = SKIN_THEMES["dark"]["warn"]
+SKIN_CRIT = SKIN_THEMES["dark"]["crit"]
+SKIN_OK = SKIN_THEMES["dark"]["ok"]
+SKIN_ACCENT = SKIN_THEMES["dark"]["accent"]
 
-SKIN_TOP_FIELDS = 81
+# TOP = 81 展示值 + 5 张卡片色（卡片上/下/描边/底槽/分隔线），全部按主题给
+SKIN_TOP_FIELDS = 86
 SKIN_GPU_FIELDS = 81
+
+
+def _skin_theme(name: Any) -> dict[str, Any]:
+    return SKIN_THEMES["light" if str(name).lower() in ("light", "1", "true") else "dark"]
 
 
 def _skin_san(text: Any) -> str:
@@ -443,15 +467,7 @@ def _skin_san(text: Any) -> str:
 def _skin_clip(text: Any, limit: int) -> str:
     """限长：右对齐列不设 W/ClipString（避免右对齐下裁剪框语义歧义），改在服务端截断。"""
     t = str(text)
-    return t if len(t) <= limit else t[: limit - 1] + "…"
-
-
-def _skin_tone_color(tone: int) -> str:
-    return (SKIN_TEXT, SKIN_WARN, SKIN_CRIT)[tone] if 0 <= tone <= 2 else SKIN_TEXT
-
-
-def _skin_pal(idx: int) -> str:
-    return SKIN_PALETTE[idx] if 0 <= idx < len(SKIN_PALETTE) else SKIN_IDLE
+    return t if len(t) <= limit else t[: limit - 1] + "\u2026"
 
 
 def _skin_pct(value: float, full: float) -> str:
@@ -460,26 +476,39 @@ def _skin_pct(value: float, full: float) -> str:
     return str(max(0, min(100, int(round(value / full * 100)))))
 
 
-def build_skin_payload(state: dict[str, Any], energy: dict[str, Any], part: str = "top") -> dict[str, Any]:
+def build_skin_payload(state: dict[str, Any], energy: dict[str, Any],
+                       part: str = "top", theme: str = "dark") -> dict[str, Any]:
+    """part=top|gpu；theme=dark|light —— 全部展示语义与配色都在此算好，皮肤不做判断。"""
+    th = _skin_theme(theme)
+    pal = th["palette"]
+    idle, hot, blank = th["idle"], th["hot"], th["blank"]
+    text, warn, crit, ok, accent = th["text"], th["warn"], th["crit"], th["ok"], th["accent"]
+
+    def tone_color(tone: int) -> str:
+        return (text, warn, crit)[tone] if 0 <= tone <= 2 else text
+
+    def pal_color(idx: int) -> str:
+        return pal[idx] if 0 <= idx < len(pal) else idle
+
     s = build_summary(state, energy)
     ts = float(s.get("ts") or 0)
     age = max(0.0, time.time() - ts) if ts else 99999.0
     if age < 30:
-        stat_text, stat_color = "实时", SKIN_OK
+        stat_text, stat_color = "实时", ok
     elif age < 120:
-        stat_text, stat_color = "数据延迟", SKIN_WARN
+        stat_text, stat_color = "数据延迟", warn
     else:
-        stat_text, stat_color = "离线 · 检查网络", SKIN_CRIT
+        stat_text, stat_color = "离线 · 检查网络", crit
 
     v: list[str] = []
     if part == "gpu":
-        v.append(f'GPU × {GPU_SLOTS} · 总 {s["gpuW"]}W + {OTHER_W}W')
+        v.append(f'GPU \u00d7 {GPU_SLOTS} \u00b7 \u603b {s["gpuW"]}W + {OTHER_W}W')
         for g in s["gpus"]:
             if g.get("mIdx") == 2 or int(g.get("idx", -1)) < 0:
-                v += ["", "", "", "0", SKIN_BG]      # 空槽位：文字空、条色同背景 → 视觉消失
+                v += ["", "", "", "0", blank]      # 空槽位：文字空、条色同卡片底 → 视觉消失
                 continue
             bar = int(g.get("bar", 6))
-            color = SKIN_HOT if bar == 7 else (_skin_pal(bar) if bar < 6 else SKIN_IDLE)
+            color = hot if bar == 7 else (pal_color(bar) if bar < 6 else idle)
             v += [_skin_clip(g.get("label", ""), 16), _skin_clip(g.get("memG", ""), 8),
                   _skin_clip(g.get("meta", ""), 26), str(g.get("util", "0")), color]
         assert len(v) == SKIN_GPU_FIELDS, f"GPU 字段数 {len(v)} != {SKIN_GPU_FIELDS}"
@@ -490,28 +519,31 @@ def build_skin_payload(state: dict[str, Any], energy: dict[str, Any], part: str 
     v += ["vLLM SENTINEL", stat_text, stat_color, f"模型服务 {models_on}/{models_all} 在线"]
     for m in s["models"]:
         if not m.get("name"):
-            v += ["", "", SKIN_BG, SKIN_BG]
+            v += ["", "", blank, blank]
             continue
-        dot = (SKIN_OK, SKIN_WARN, SKIN_CRIT, SKIN_BG)[min(int(m.get("stIdx", 3)), 3)]
+        dot = (ok, warn, crit, blank)[min(int(m.get("stIdx", 3)), 3)]
         v += [_skin_clip(m["name"], 22), _skin_clip(m.get("value", ""), 30),
-              _skin_pal(int(m.get("cIdx", 6))), dot]
+              pal_color(int(m.get("cIdx", 6))), dot]
 
-    v += ["总使用率", f'{s["cpuUse"]} %', SKIN_TEXT, _skin_pct(float(s["cpuUse"] or 0), 100)]
-    v += ["内存使用率", f'{s["memUse"]} %', SKIN_TEXT, _skin_pct(float(s["memUse"] or 0), 100)]
-    v += ["内存温度", s["dimm"], _skin_tone_color(int(s["dimmTone"])), "0"]
-    v += ["内存供电温度", s["vr"], _skin_tone_color(int(s["vrTone"])), "0"]
-    v += ["最高单核", f'{s["maxCore"]} %', SKIN_TEXT, _skin_pct(float(s["maxCore"] or 0), 100)]
-    v += ["CPU 温度", s["cpuTemp"], _skin_tone_color(int(s["cpuTone"])), "0"]
-    v += ["线程 / 频率", f'{s["threads"]} 线程 · {s["freqM"]}MHz', SKIN_TEXT, "0"]
-    v += ["整机功耗", f'{s["totalW"]} W', SKIN_TEXT, _skin_pct(float(s["totalW"] or 0), 1500)]
+    v += ["\u603b\u4f7f\u7528\u7387", f'{s["cpuUse"]} %', text, _skin_pct(float(s["cpuUse"] or 0), 100)]
+    v += ["\u5185\u5b58\u4f7f\u7528\u7387", f'{s["memUse"]} %', text, _skin_pct(float(s["memUse"] or 0), 100)]
+    v += ["\u5185\u5b58\u6e29\u5ea6", s["dimm"], tone_color(int(s["dimmTone"])), "0"]
+    v += ["\u5185\u5b58\u4f9b\u7535\u6e29\u5ea6", s["vr"], tone_color(int(s["vrTone"])), "0"]
+    v += ["\u6700\u9ad8\u5355\u6838", f'{s["maxCore"]} %', text, _skin_pct(float(s["maxCore"] or 0), 100)]
+    v += ["CPU \u6e29\u5ea6", s["cpuTemp"], tone_color(int(s["cpuTone"])), "0"]
+    v += ["\u7ebf\u7a0b / \u9891\u7387", f'{s["threads"]} \u7ebf\u7a0b \u00b7 {s["freqM"]}MHz', text, "0"]
+    v += ["\u6574\u673a\u529f\u8017", f'{s["totalW"]} W', text, _skin_pct(float(s["totalW"] or 0), 1500)]
 
-    v += ["本月额度", f'{s["costM"]} / {MONTH_BUDGET:.0f} 元',
-          SKIN_WARN if int(s["costMTone"]) else SKIN_ACCENT, _skin_pct(float(s["costM"] or 0), MONTH_BUDGET)]
-    v += ["本年额度", f'{s["costY"]} / {YEAR_BUDGET:.0f} 元',
-          SKIN_WARN if int(s["costYTone"]) else SKIN_ACCENT, _skin_pct(float(s["costY"] or 0), YEAR_BUDGET)]
-    v += ["网络流量（20日起计）", f'{s["netTB"]} / {NET_TOTAL_TB} TB',
-          SKIN_CRIT if int(s["netWarn"]) else SKIN_ACCENT, _skin_pct(float(s["netTB"] or 0), NET_TOTAL_TB)]
+    v += ["\u672c\u6708\u989d\u5ea6", f'{s["costM"]} / {MONTH_BUDGET:.0f} \u5143',
+          warn if int(s["costMTone"]) else accent, _skin_pct(float(s["costM"] or 0), MONTH_BUDGET)]
+    v += ["\u672c\u5e74\u989d\u5ea6", f'{s["costY"]} / {YEAR_BUDGET:.0f} \u5143',
+          warn if int(s["costYTone"]) else accent, _skin_pct(float(s["costY"] or 0), YEAR_BUDGET)]
+    v += ["\u7f51\u7edc\u6d41\u91cf\uff0820\u65e5\u8d77\u8ba1\uff09", f'{s["netTB"]} / {NET_TOTAL_TB} TB',
+          crit if int(s["netWarn"]) else accent, _skin_pct(float(s["netTB"] or 0), NET_TOTAL_TB)]
 
-    v.append(f'点击打开控制台 · {s["host"]} · {s["iface"]} · {s["refreshS"]}s 刷新')
+    v.append(f'\u70b9\u51fb\u6253\u5f00\u63a7\u5236\u53f0 \u00b7 {s["host"]} \u00b7 {s["iface"]} \u00b7 {s["refreshS"]}s \u5237\u65b0')
+    # 卡片外观色（按主题）：上 / 下 / 描边 / 底槽 / 分隔线
+    v += [th["card_top"], th["card_bottom"], th["border"], th["trough"], th["divider"]]
     assert len(v) == SKIN_TOP_FIELDS, f"TOP 字段数 {len(v)} != {SKIN_TOP_FIELDS}"
     return {"v": [_skin_san(x) for x in v]}
+
