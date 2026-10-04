@@ -449,13 +449,19 @@ SKIN_CRIT = SKIN_THEMES["dark"]["crit"]
 SKIN_OK = SKIN_THEMES["dark"]["ok"]
 SKIN_ACCENT = SKIN_THEMES["dark"]["accent"]
 
-# TOP = 81 展示值 + 5 张卡片色（卡片上/下/描边/底槽/分隔线），全部按主题给
-SKIN_TOP_FIELDS = 86
+# TOP = 81 个展示值（卡片底色/描边/底槽/分隔线由皮肤本地按主题算，不走网络——
+# 否则每轮取数期间这些色值为空，卡片会瞬间变暗）
+SKIN_TOP_FIELDS = 81
 SKIN_GPU_FIELDS = 81
 
 
 def _skin_theme(name: Any) -> dict[str, Any]:
-    return SKIN_THEMES["light" if str(name).lower() in ("light", "1", "true") else "dark"]
+    """theme 参数：0/1、1.0、light/dark、true/false 都认；认不出按深色。"""
+    raw = str(name).strip().lower()
+    try:
+        return SKIN_THEMES["light" if float(raw) >= 0.5 else "dark"]
+    except (TypeError, ValueError):
+        return SKIN_THEMES["light" if raw in ("light", "true", "yes", "on") else "dark"]
 
 
 def _skin_san(text: Any) -> str:
@@ -542,8 +548,6 @@ def build_skin_payload(state: dict[str, Any], energy: dict[str, Any],
           crit if int(s["netWarn"]) else accent, _skin_pct(float(s["netTB"] or 0), NET_TOTAL_TB)]
 
     v.append(f'\u70b9\u51fb\u6253\u5f00\u63a7\u5236\u53f0 \u00b7 {s["host"]} \u00b7 {s["iface"]} \u00b7 {s["refreshS"]}s \u5237\u65b0')
-    # 卡片外观色（按主题）：上 / 下 / 描边 / 底槽 / 分隔线
-    v += [th["card_top"], th["card_bottom"], th["border"], th["trough"], th["divider"]]
     assert len(v) == SKIN_TOP_FIELDS, f"TOP 字段数 {len(v)} != {SKIN_TOP_FIELDS}"
     return {"v": [_skin_san(x) for x in v]}
 

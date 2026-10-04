@@ -75,9 +75,9 @@ a.btn:hover{{background:#6ccaff}}ol{{padding-left:22px;color:#c8c8c8}}code{{back
 <div class="meta">当前版本 v{ver} · {size} 字节 · md5 {md5}<br>下载后核对大小/md5，与上面不一致说明拿到的是浏览器缓存旧包</div>
 <a class="btn" href="/static/{f}">下载 vLLMSentinel-win.zip</a>
 <ol><li>装 Rainmeter（任意较新版）</li>
-<li>解压 zip，把 <code>vLLMSentinel</code> 和 <code>vLLMSentinelSelftest</code> 两个文件夹放进 <code>%APPDATA%\Rainmeter\Skins\</code></li>
+<li>解压 zip，把 <code>vLLMSentinel</code> 和 <code>vLLMSentinelSelftest</code> 两个文件夹放进 <code>%APPDATA%\\Rainmeter\\Skins\\</code></li>
 <li>Rainmeter 里加载 <code>vLLMSentinel.ini</code>（首次先加载 <code>vLLMSentinelSelftest</code> 自检更稳）</li>
-<li>旧版请先删除 <code>Skins\vLLMSentinel</code> 再放新文件夹</li></ol>
+<li>旧版请先删除 <code>Skins\\vLLMSentinel</code> 再放新文件夹</li></ol>
 <div class="note">数据源 /api/skin（每 6 秒刷新）· 需要 EasyTier 在线才能取到数据</div>
 </div></body></html>""")
 print("  入口页: /static/vLLMSentinel/index.html")
