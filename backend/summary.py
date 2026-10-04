@@ -25,19 +25,29 @@ NET_TOTAL_TB = 1.5         # 流量周期总配额
 NET_WARN_TB = 1.0          # 达到即红色告警
 STALE_NET_MS = 40000       # 网络 EMA 沿用旧值时限（组件 STALE_GRACE_MS 同值）
 
-MODEL_COLORS = ["#4e9cff", "#34d399", "#f59e0b", "#a78bfa", "#f472b6", "#22d3ee"]
+MODEL_COLORS = ["#4e9cff", "#34d399", "#f59e0b", "#a78bfa", "#f472b6",
+                "#22d3ee", "#facc15", "#2dd4bf", "#e879f9", "#7dd3fc"]
 
 # 与 Mac 组件 index.jsx v96.9 完全一致的固定配色表
 MODEL_COLOR_MAP = {
+    # 在跑的服务逐个显式指定，保证互不撞色（2026-10-08 扩到 10 色：
+    # 三个 Qwen 系各占一色，GPU0 四个小服务各占一色）
     "DeepSeek-V4-Flash-Exp": "#4e9cff",
     "DeepSeek-V4.1-Flash": "#4e9cff",
+    "Qwen3.8-Flash-Next": "#34d399",
     "GLM-5.3-Flash": "#34d399",
     "Qwen3.8-27B-W4A16": "#f59e0b",
+    "WeMM-Embedding-4B": "#a78bfa",
     "WeMM-Embedding-9B": "#a78bfa",
-    "Meeting-ASR": "#f472b6",
+    "Laya-421M": "#f472b6",
+    "ID-Decision-2B": "#22d3ee",
+    "OTC-Rerank": "#facc15",
+    "Qwen3-Embedding-0.6B": "#2dd4bf",
+    "Unlimited-OCR": "#e879f9",
     "MiniMax-H3": "#22d3ee",
+    "WeMM-Embedding-4B-CPU": "#a78bfa",
     "WeMM-Embedding-9B-CPU": "#facc15",
-    "Qwen3-Embedding-0.6B": "#60a5fa",
+    "Meeting-ASR": "#f472b6",
     "CosyVoice-TTS": "#fb923c",
     "FishSpeech-TTS": "#4ade80",
     "GPT-SoVITS-TTS": "#c084fc",
@@ -326,18 +336,21 @@ def build_gpu_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
             bar_tone = 6
         else:
             bar_tone = color_index(model)
+        ci = color_index(model) if (not missing and not idle and temp < HOT_TEMP) else (-2 if temp >= HOT_TEMP else -1)
         out.append({
-            "idx": g["index"], "label": label, "meta": meta,
+            "idx": g["index"], "label": label, "meta": meta, "model": model,
             "memG": _num(float(g.get("memory_used_mb") or 0) / 1024.0, 1) + "G",
             "util": _num(util, 0), "temp": _num(temp, 0),
             "tone": 2 if (missing or temp >= HOT_TEMP) else 0,
-            "bar": bar_tone,
+            "bar": bar_tone,          # 旧字段：0-5 调色板 / 6 空闲 / 7 高温（老端点仍按此解释）
+            "cIdx": ci,               # 新字段：-1 空闲 / -2 高温 / 0..9 调色板序号
             # mIdx：0 正常灰 / 1 红（失联或高温）/ 2 空行隐藏
             "mIdx": 1 if (missing or temp >= HOT_TEMP) else 0,
         })
     rows_out = out[:GPU_SLOTS]
     while len(rows_out) < GPU_SLOTS:
-        rows_out.append({"idx": -1, "label": "", "meta": "", "memG": "", "util": "0", "temp": "0", "tone": 0, "bar": 8, "mIdx": 2})
+        rows_out.append({"idx": -1, "label": "", "meta": "", "model": "", "memG": "", "util": "0",
+                         "temp": "0", "tone": 0, "bar": 8, "cIdx": -1, "mIdx": 2})
     return rows_out
 
 
@@ -432,7 +445,8 @@ def build_summary(state: dict[str, Any], energy: dict[str, Any]) -> dict[str, An
 # ---------------------------------------------------------------------------
 SKIN_THEMES: dict[str, dict[str, Any]] = {
     "dark": {
-        "palette": ["78,156,255", "52,211,153", "245,158,11", "167,139,250", "244,114,182", "34,211,238"],
+        "palette": ["78,156,255", "52,211,153", "245,158,11", "167,139,250", "244,114,182",
+                    "34,211,238", "250,204,21", "45,212,191", "232,121,249", "125,211,252"],
         "idle": "100,116,139", "hot": "239,68,68", "blank": "32,32,32",
         "text": "255,255,255", "warn": "245,184,58", "crit": "239,68,68", "ok": "126,226,168",
         "accent": "110,140,255",
@@ -440,7 +454,8 @@ SKIN_THEMES: dict[str, dict[str, Any]] = {
         "border": "70,70,70,255", "trough": "58,58,58,255", "divider": "255,255,255,22",
     },
     "light": {
-        "palette": ["30,110,210", "16,150,110", "186,105,0", "120,90,220", "205,70,140", "10,150,170"],
+        "palette": ["30,110,210", "16,150,110", "186,105,0", "120,90,220", "205,70,140",
+                    "10,150,170", "176,138,0", "10,140,120", "190,60,200", "20,120,190"],
         "idle": "128,128,128", "hot": "200,40,40", "blank": "246,246,246",
         "text": "26,26,26", "warn": "175,100,0", "crit": "196,36,36", "ok": "16,130,80",
         "accent": "0,105,200",
@@ -524,8 +539,8 @@ def build_skin_payload(state: dict[str, Any], energy: dict[str, Any],
             if g.get("mIdx") == 2 or int(g.get("idx", -1)) < 0:
                 v += ["", "", "", "0", blank]      # 空槽位：文字空、条色同卡片底 → 视觉消失
                 continue
-            bar = int(g.get("bar", 6))
-            color = hot if bar == 7 else (pal_color(bar) if bar < 6 else idle)
+            ci = int(g.get("cIdx", -1))
+            color = hot if ci == -2 else (idle if ci < 0 else pal_color(ci))
             v += [_skin_clip(g.get("label", ""), 16), _skin_clip(g.get("memG", ""), 8),
                   _skin_clip(g.get("meta", ""), 26), str(g.get("util", "0")), color]
         assert len(v) == SKIN_GPU_FIELDS, f"GPU 字段数 {len(v)} != {SKIN_GPU_FIELDS}"

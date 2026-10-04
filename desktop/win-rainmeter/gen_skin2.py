@@ -304,8 +304,9 @@ def emit(outdir, base):
     for i in range(GPU_N):
         base_i = G_GPU + i * 5
         yy = y + i * ROW_GPU
+        # 标签色与负载条同色（= 该模型在"模型服务"里的颜色），空行/高温由服务端给灰/红
         m_line(f"GLabel{i+1}", "String", g_lbl_x, yy, text=f"[&g{base_i:02d}]",
-               style="StyleBase", size="8.5", w=g_lbl_w, clip="1", color="[&msText]")
+               style="StyleBase", size="8.5", w=g_lbl_w, clip="1", color=f"[&g{base_i+4:02d}]")
         m_line(f"GMem{i+1}", "String", g_mem_x + g_mem_w, yy, text=f"[&g{base_i+1:02d}]",
                style="StyleBase,StyleTiny", size="8", align="right", color="[&msDim]")
         m_line(f"GBar{i+1}", "Bar", g_bar_x, yy + 6, measure=f"g{base_i+3:02d}",
