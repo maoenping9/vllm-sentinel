@@ -18,3 +18,9 @@ work/
 index.jsx.bak-*
 index.jsx.current.bak-*
 *.tsbuildinfo
+
+# 发布脚手架：第三方文档快照不入库（options_whitelist.json 为生成物，保留）
+desktop/win-rainmeter/docs/*.html
+
+# 历史版本包只留最新一个入库，其余本地 archive（服务器静态位另有全套）
+desktop/win-rainmeter/archive/

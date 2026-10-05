@@ -122,7 +122,7 @@ def check_regex(secs: dict[str, dict[str, str]], server: str) -> None:
             fail(f"[{parent}] 缺 RegExp")
             continue
         groups = len(re.findall(r"\((?!\?)", pattern))
-        raw = urllib.request.urlopen(f"{server}/api/skin?part={part}", timeout=8).read().decode()
+        raw = urllib.request.urlopen(f"{server}/api/skin?part={part}", timeout=30).read().decode()
         m = re.search(pattern, raw)
         if not m:
             fail(f"[{parent}] 实测：正则匹配不到响应")

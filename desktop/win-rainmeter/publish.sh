@@ -1,70 +1,91 @@
 #!/usr/bin/env bash
 # vLLMSentinel Windows 皮肤一键发布
 #
-# 流程：生成 ini → 两道校验（文档白名单 + 正则实测）→ 打版本包 + 固定包 → 发布到控制台静态位
-# 固定下载地址（永不变，永远指向最新版）：
-#     http://your-server-ip:8889/static/vLLMSentinel-win.zip
-# 版本包同时保留一份，便于回退：
-#     http://your-server-ip:8889/static/vLLMSentinel-win-v<N>.zip
+# 两条产物线互不污染（公开仓库脱敏要求）：
+#   1) 仓库内 build/  → 地址一律写占位符
+#   2) 交付包 zip     → 注入真实服务器地址（SENTINEL_SERVER），推到静态下载位
 #
-# 用法: ./publish.sh [版本号，默认递增] [数据源地址]
+# 用法:
+#   SENTINEL_SERVER=http://你的服务器:8889 SENTINEL_STATIC_DIR=/path/to/static ./publish.sh [版本号] [校验用地址]
+#   版本号缺省按现有 v*.zip 递增；校验用地址缺省 http://127.0.0.1:8889
 set -euo pipefail
 cd "$(dirname "$0")"
 
-SERVER="${2:-http://127.0.0.1:8889}"
-STATIC_DIR="/path/to/deploy/static"
 VER="${1:-}"
+VERIFY="${2:-${SENTINEL_VERIFY:-http://127.0.0.1:8889}}"
+REAL_SERVER="${SENTINEL_SERVER:-http://your-server-ip:8889}"
+STATIC_DIR="${SENTINEL_STATIC_DIR:-}"
+PLACEHOLDER="http://your-server-ip:8889"
 
 if [[ -z "$VER" ]]; then
   last=$(ls -1 vLLMSentinel-win-v*.zip 2>/dev/null | sed 's/.*-v\([0-9]*\)\.zip/\1/' | sort -n | tail -1)
   VER=$(( ${last:-0} + 1 ))
 fi
 
-echo "== 1/4 生成 ini（数据源 $SERVER）"
-python3 gen_skin2.py build/vLLMSentinel "$SERVER"
+echo "== 1/5 生成仓库用 ini（地址写占位符，保证公开仓库脱敏）"
+SENTINEL_INI_SERVER="$PLACEHOLDER" python3 gen_skin2.py build/vLLMSentinel "$VERIFY"
 
-echo "== 2/4 校验：选项名是否真实存在（官方文档白名单）"
+echo "== 2/5 校验：选项名是否真实存在（官方文档白名单）"
 python3 validate_ini.py build/vLLMSentinel/vLLMSentinel.ini
 python3 validate_ini.py build/vLLMSentinelSelftest/vLLMSentinelSelftest.ini
 
-echo "== 3/4 校验：正则实测 / 引用完整性 / 坐标"
-python3 verify_skin.py build/vLLMSentinel/vLLMSentinel.ini "$SERVER"
+echo "== 3/5 校验：正则实测 / 引用完整性 / 坐标"
+python3 verify_skin.py build/vLLMSentinel/vLLMSentinel.ini "$VERIFY"
 
-echo "== 4/4 打包并发布"
-cp README.md build/README.md
-python3 - "$VER" <<'PY'
-import os, shutil, sys, zipfile, hashlib
-ver = sys.argv[1]
-ver_zip = f"vLLMSentinel-win-v{ver}.zip"
-stable_zip = "vLLMSentinel-win.zip"
-for out in (ver_zip, stable_zip):
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for root, _, files in os.walk("build"):
-            for f in files:
-                p = os.path.join(root, f)
-                z.write(p, os.path.relpath(p, "build"))
-static = "/path/to/deploy/static"
-os.makedirs(static, exist_ok=True)
-for f in (ver_zip, stable_zip):
-    shutil.copy(f, os.path.join(static, f))
-    os.chmod(os.path.join(static, f), 0o644)
-md5 = hashlib.md5(open(stable_zip, "rb").read()).hexdigest()[:8]
-print(f"  版本包: {ver_zip}")
-print(f"  固定包: {stable_zip}  ({os.path.getsize(stable_zip)} B, md5 {md5})")
+echo "== 4/5 生成交付包（注入真实地址 $REAL_SERVER）"
+DELIVER=$(mktemp -d)
+SENTINEL_INI_SERVER_OVERRIDE="$REAL_SERVER" python3 - "$DELIVER" <<'PY'
+import os, subprocess, sys
+deliver = sys.argv[1]
+env = dict(os.environ)
+env["SENTINEL_INI_SERVER"] = env.get("SENTINEL_INI_SERVER_OVERRIDE", "http://your-server-ip:8889")
+subprocess.run(["python3", "gen_skin2.py", os.path.join(deliver, "vLLMSentinel"),
+                env.get("SENTINEL_VERIFY", "http://127.0.0.1:8889")], check=True, env=env,
+               stdout=subprocess.DEVNULL)
+PY
+python3 - "$DELIVER" "$REAL_SERVER" <<'PY'
+import os, re, sys
+deliver, real = sys.argv[1], sys.argv[2]
+src = "build/vLLMSentinelSelftest/vLLMSentinelSelftest.ini"
+dst = os.path.join(deliver, "vLLMSentinelSelftest.ini")
+s = open(src, encoding="utf-8").read()
+if real:
+    s = s.replace("http://your-server-ip:8889", real)
+open(dst, "w", encoding="utf-8").write(s)
 PY
 
-# 生成固定入口页（可收藏，点按钮即下载；显示版本/大小/md5 便于核对是否下到新版）
-python3 - "$VER" <<'PY'
-import hashlib, os, sys
-ver = sys.argv[1]
-f = "vLLMSentinel-win.zip"
-size = os.path.getsize(f)
-md5 = hashlib.md5(open(f, "rb").read()).hexdigest()
-dest = "/path/to/deploy/static/vLLMSentinel/index.html"
-os.makedirs(os.pathname(dest) if False else os.path.dirname(dest), exist_ok=True)
-open(dest, "w", encoding="utf-8").write(f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+echo "== 5/5 打固定包 + 版本包并发布"
+cp README.md build/README.md
+python3 - "$VER" "$DELIVER" "$STATIC_DIR" <<'PY'
+import hashlib, os, shutil, sys, zipfile
+
+ver, deliver, static = sys.argv[1], sys.argv[2], sys.argv[3]
+ver_zip = f"vLLMSentinel-win-v{ver}.zip"
+stable_zip = "vLLMSentinel-win.zip"
+
+def add_tree(z, base, prefix):
+    for root, _dirs, files in os.walk(base):
+        for f in files:
+            p = os.path.join(root, f)
+            z.write(p, os.path.join(prefix, os.path.relpath(p, base)))
+
+for out in (ver_zip, stable_zip):
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        add_tree(z, os.path.join(deliver, "vLLMSentinel"), "vLLMSentinel")
+        z.write(os.path.join(deliver, "vLLMSentinelSelftest.ini"), "vLLMSentinelSelftest/vLLMSentinelSelftest.ini")
+        z.write("build/README.md", "README.md")
+
+if static and os.path.isdir(static):
+    for f in (ver_zip, stable_zip):
+        shutil.copy(f, os.path.join(static, f))
+        os.chmod(os.path.join(static, f), 0o644)
+    page_dir = os.path.join(static, "vLLMSentinel")
+    os.makedirs(page_dir, exist_ok=True)
+    size = os.path.getsize(stable_zip)
+    md5 = hashlib.md5(open(stable_zip, "rb").read()).hexdigest()
+    open(os.path.join(page_dir, "index.html"), "w", encoding="utf-8").write(f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <title>vLLM Sentinel Windows 组件</title><style>
-body{{margin:0;background:#202020;color:#e8e8e8;font:15px/1.6 "Microsoft YaHei UI","Segoe UI",sans-serif;display:flex;justify-content:center;padding:48px 20px}}
+body{{margin:0;background:#202020;color:#e8e8e8;font:15px/1.6 "Segoe UI Variable Text","Microsoft YaHei UI",sans-serif;display:flex;justify-content:center;padding:48px 20px}}
 .box{{max-width:560px;width:100%}}h1{{font-size:20px;margin:0 0 4px}}
 .meta{{color:#9a9a9a;font-size:13px;margin-bottom:22px}}
 a.btn{{display:inline-block;background:#4cc2ff;color:#00253a;font-weight:600;text-decoration:none;padding:13px 26px;border-radius:8px;font-size:16px}}
@@ -73,17 +94,17 @@ a.btn:hover{{background:#6ccaff}}ol{{padding-left:22px;color:#c8c8c8}}code{{back
 </style></head><body><div class="box">
 <h1>vLLM Sentinel · Windows 桌面组件</h1>
 <div class="meta">当前版本 v{ver} · {size} 字节 · md5 {md5}<br>下载后核对大小/md5，与上面不一致说明拿到的是浏览器缓存旧包</div>
-<a class="btn" href="/static/{f}">下载 vLLMSentinel-win.zip</a>
+<a class="btn" href="/static/{stable_zip}">下载 {stable_zip}</a>
 <ol><li>装 Rainmeter（任意较新版）</li>
-<li>解压 zip，把 <code>vLLMSentinel</code> 和 <code>vLLMSentinelSelftest</code> 两个文件夹放进 <code>%APPDATA%\\Rainmeter\\Skins\\</code></li>
+<li>解压 zip，把 <code>vLLMSentinel</code> 和 <code>vLLMSentinelSelftest</code> 放进 <code>%APPDATA%/Rainmeter/Skins/</code></li>
 <li>Rainmeter 里加载 <code>vLLMSentinel.ini</code>（首次先加载 <code>vLLMSentinelSelftest</code> 自检更稳）</li>
-<li>旧版请先删除 <code>Skins\\vLLMSentinel</code> 再放新文件夹</li></ol>
-<div class="note">数据源 /api/skin（每 6 秒刷新）· 需要 EasyTier 在线才能取到数据</div>
+<li>旧版请先删除 <code>Skins/vLLMSentinel</code> 再放新文件夹</li></ol>
+<div class="note">数据源 /api/skin（每 6 秒刷新）· 需要内网/VPN 在线才能取到数据</div>
 </div></body></html>""")
-print("  入口页: /static/vLLMSentinel/index.html")
+    print(f"  已发布到静态位: {os.path.join(static, stable_zip)}")
+print(f"  版本包: {ver_zip}")
+print(f"  固定包: {stable_zip}  ({os.path.getsize(stable_zip)} B, md5 {hashlib.md5(open(stable_zip,'rb').read()).hexdigest()[:8]})")
 PY
-
+rm -rf "$DELIVER" 2>/dev/null || true
 echo
-echo "入口页（可收藏，点按钮下载）：http://your-server-ip:8889/static/vLLMSentinel/"
-echo "固定下载地址（永不变）：http://your-server-ip:8889/static/vLLMSentinel-win.zip"
-echo "局域网备用：          http://your-server-ip:8889/static/vLLMSentinel-win.zip"
+echo "完成。交付包已注入真实地址；仓库内 build/ 保持占位符。"

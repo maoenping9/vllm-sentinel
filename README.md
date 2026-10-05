@@ -1,8 +1,17 @@
 # vLLM Sentinel
 
-> **v2.2** — 面向多 GPU vLLM 推理机的实时监控控制台 + macOS 桌面 3D 机箱小组件（Übersicht）。
+> **v2.3** — 面向多 GPU vLLM 推理机的实时监控控制台 + macOS 桌面 3D 机箱小组件（Übersicht）+ Windows 桌面监控组件（Rainmeter）。
 
 一个 Docker 命令拉起 Web 控制台，同时看模型吞吐/延迟、GPU 阵列、主机资源和 BMC 功耗；桌面小组件以等轴 3D 机箱实时呈现全部 GPU（卡数自适应）、猫扇/涡轮扇转速、GPU 三段状态条、涡轮显卡风扇与前→后气流动画。
+
+v2.3 亮点（在 v2.2 基础上）：
+- **新增 Windows 桌面组件（Rainmeter）**：与 Mac 组件同源的轻量卡片——模型服务、GPU 阵列、CPU 综合、电费/流量额度四段；每 6 秒刷新，纯读接口、不新增任何常驻服务（复用控制台静态位分发）。生成器：`desktop/win-rainmeter/gen_skin2.py`，一键发布：`publish.sh`（生成 → 两道校验 → 打固定包/版本包）。
+- **新增 `/api/skin` 端点**：为 Rainmeter 输出**固定顺序的值数组**（top 81 值 / gpu 81 值）。原因有二：WebParser 单个亲度量最多 99 个 StringIndex（按 JSON 键写正则会绑死键序，改一个字段全线错位）；且单位/取整/配色（强调色、告警档、模型色）等**展示语义全部留在服务端**，客户端只负责摆放。
+- **皮肤跟随系统浅色/深色主题**：服务端按 `theme` 参数出整套配色（深色中性卡 / 浅色浅灰卡、文字、告警、模型色各一套），皮肤读注册表 `AppsUseLightTheme` 上报主题。**卡片自身描边/底色/底槽在本地按主题映射**——这些色若走网络，取数间隙会变空导致卡片瞬暗。
+- **配色表扩到 10 色**：在跑服务逐个显式指定，不再依赖哈希兜底（三个 Qwen 家族、以及 GPU0 上的小服务各占一色）。
+- **GPU 阵列行 = 模型服务同色**：标签文字与负载条共用该模型在模型列表里的颜色，扫一眼就能对上。
+- **一卡多服务全部呈现**：原先一张卡只认第一个匹配到的服务（GPU0 上 4 个常驻小服务只报出 1 个，且名字/端口是迁移前的旧值）。现按每条进程向上解析、按服务聚合，并显示**该服务自身进程显存**（整卡占用会被重复计给同一卡上的每个服务）。
+- **交付带自检与校验**：`validate_ini.py`（选项名必须在 Rainmeter 官方文档白名单内，含「多个 MeterStyle 必须用竖线而非逗号」这类静默失效陷阱）+ `verify_skin.py`（正则实测、引用完整性、坐标）；另附 `vLLMSentinelSelftest` 自检皮肤用于窗口尺寸/坐标核对。
 
 v2.2 亮点（在 v2.1 基础上）：
 - **累计口径改为持久日汇总**：新增 `daily` 汇总表（电量 / 电费 / 流量，**永不被历史裁剪删除**），自然月、自然年、流量周期都由它求和 —— 年度额度不再等于最近 31 天，跨月持续累加；日/月/年边界一律按本地时区（原先容器 UTC 会把月初/年初算错 8 小时）。`/api/energy` 由每次全表扫样本变为毫秒级增量。
@@ -32,6 +41,7 @@ v2.0 亮点：
 - `backend/` — FastAPI 数据服务（`/api/state` GPU↔模型映射、`/api/energy` BMC 功耗）
 - `frontend/` — React/Vite Web 控制台
 - `desktop/` — macOS Übersicht 3D 机箱小组件（Intel Mac）
+- `desktop/win-rainmeter/` — Windows Rainmeter 监控卡片（生成器 + 校验器 + 发布脚本 + 自检皮肤）
 - `docs/screenshots/` — 效果图
 
 ## 效果图
@@ -134,6 +144,8 @@ VLLM_ENDPOINTS=[{"name":"GLM-5.3-Flash","url":"http://127.0.0.1:9004"}]
 - `GET /api/stream`
 - `GET /api/history?range=1h`
 - `GET /api/energy`（累计电量/电费 + 月/年/流量周期累计）
+- `GET /api/summary`（键值 JSON 摘要，桌面小组件用）
+- `GET /api/skin?part=top|gpu&theme=dark|light`（Rainmeter 用固定顺序值数组，见 v2.3 亮点）
 
 ## License
 

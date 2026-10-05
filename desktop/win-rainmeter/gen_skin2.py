@@ -33,7 +33,7 @@ ROW_KV = 19
 ROW_QUOTA = 21
 FONT = "Segoe UI Variable Text"   # Win11 原生 UI 字体；缺失时系统自动回退
 REFRESH_SEC = 6
-SERVER_DEFAULT = "http://your-server-ip:8889"
+SERVER_DEFAULT = os.environ.get("SENTINEL_INI_SERVER", "http://your-server-ip:8889")  # 仓库内保持占位符
 BG_1 = "32,32,32,255"          # 卡片渐变上端（Win11 深色中性面 #202020）
 BG_2 = "41,41,41,255"          # 卡片渐变下端
 BORDER = "62,62,62,255"        # 圆角描边 #3E3E3E
@@ -71,7 +71,7 @@ GPU_LEN = G_GPU - 1 + GPU_N * 5        # 81
 
 def fetch(part, base):
     url = f"{base}/api/skin?part={part}"
-    with urllib.request.urlopen(url, timeout=8) as r:
+    with urllib.request.urlopen(url, timeout=30) as r:
         return json.load(r)["v"]
 
 
@@ -121,7 +121,7 @@ def emit(outdir, base):
     add("RestoreAfterRestart=1")
     add("")
     add("[Variables]")
-    add(f"; 唯一需要改的配置：服务器地址（EasyTier 内网 your-server-ip + 控制台端口 8889）")
+    add("; 唯一需要改的配置：服务器地址（内网/VPN 地址 + 控制台端口）")
     add(f"SERVER={SERVER_DEFAULT}")
     add(f"REFRESH_SEC={REFRESH_SEC}")
     add("; 卡片自身配色：皮肤按系统主题本地取用（不走网络，避免刷新时卡片瞬暗）")
