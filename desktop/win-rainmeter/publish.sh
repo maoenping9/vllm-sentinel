@@ -43,18 +43,19 @@ subprocess.run(["python3", "gen_skin2.py", os.path.join(deliver, "vLLMSentinel")
                 env.get("SENTINEL_VERIFY", "http://127.0.0.1:8889")], check=True, env=env,
                stdout=subprocess.DEVNULL)
 PY
+mkdir -p "$DELIVER/vLLMSentinelSelftest"
 python3 - "$DELIVER" "$REAL_SERVER" <<'PY'
-import os, re, sys
+import os, sys
 deliver, real = sys.argv[1], sys.argv[2]
 src = "build/vLLMSentinelSelftest/vLLMSentinelSelftest.ini"
-dst = os.path.join(deliver, "vLLMSentinelSelftest.ini")
+dst = os.path.join(deliver, "vLLMSentinelSelftest", "vLLMSentinelSelftest.ini")
 s = open(src, encoding="utf-8").read()
 if real:
     s = s.replace("http://your-server-ip:8889", real)
 open(dst, "w", encoding="utf-8").write(s)
 PY
 
-echo "== 5/5 打固定包 + 版本包并发布"
+echo "== 5/5 打包并发布（仓库内 zip 一律占位符版；交付版注入真实地址后只进静态位）"
 cp README.md build/README.md
 python3 - "$VER" "$DELIVER" "$STATIC_DIR" <<'PY'
 import hashlib, os, shutil, sys, zipfile
@@ -63,26 +64,37 @@ ver, deliver, static = sys.argv[1], sys.argv[2], sys.argv[3]
 ver_zip = f"vLLMSentinel-win-v{ver}.zip"
 stable_zip = "vLLMSentinel-win.zip"
 
-def add_tree(z, base, prefix):
-    for root, _dirs, files in os.walk(base):
-        for f in files:
-            p = os.path.join(root, f)
-            z.write(p, os.path.join(prefix, os.path.relpath(p, base)))
 
-for out in (ver_zip, stable_zip):
+def build(out, base):
+    """base 下须有 vLLMSentinel/ 与 vLLMSentinelSelftest/ 两个目录。"""
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        add_tree(z, os.path.join(deliver, "vLLMSentinel"), "vLLMSentinel")
-        z.write(os.path.join(deliver, "vLLMSentinelSelftest.ini"), "vLLMSentinelSelftest/vLLMSentinelSelftest.ini")
+        for name in ("vLLMSentinel", "vLLMSentinelSelftest"):
+            d = os.path.join(base, name)
+            for root, _dirs, files in os.walk(d):
+                for f in files:
+                    p = os.path.join(root, f)
+                    z.write(p, os.path.join(name, os.path.relpath(p, d)))
         z.write("build/README.md", "README.md")
+    return out
+
+
+# 1) 仓库内：占位符版（公开仓库不得出现内网地址，二进制包也要管住）
+build(ver_zip, "build")
+build(stable_zip, "build")
+
+# 2) 交付版：注入真实地址，只写到静态下载位，绝不落回仓库目录
+dver = build(os.path.join(deliver, "deliver-" + ver_zip), deliver)
+dstable = build(os.path.join(deliver, "deliver-" + stable_zip), deliver)
 
 if static and os.path.isdir(static):
+    shutil.copy(dver, os.path.join(static, ver_zip))
+    shutil.copy(dstable, os.path.join(static, stable_zip))
     for f in (ver_zip, stable_zip):
-        shutil.copy(f, os.path.join(static, f))
         os.chmod(os.path.join(static, f), 0o644)
     page_dir = os.path.join(static, "vLLMSentinel")
     os.makedirs(page_dir, exist_ok=True)
-    size = os.path.getsize(stable_zip)
-    md5 = hashlib.md5(open(stable_zip, "rb").read()).hexdigest()
+    size = os.path.getsize(dstable)
+    md5 = hashlib.md5(open(dstable, "rb").read()).hexdigest()
     open(os.path.join(page_dir, "index.html"), "w", encoding="utf-8").write(f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <title>vLLM Sentinel Windows 组件</title><style>
 body{{margin:0;background:#202020;color:#e8e8e8;font:15px/1.6 "Segoe UI Variable Text","Microsoft YaHei UI",sans-serif;display:flex;justify-content:center;padding:48px 20px}}
@@ -101,10 +113,10 @@ a.btn:hover{{background:#6ccaff}}ol{{padding-left:22px;color:#c8c8c8}}code{{back
 <li>旧版请先删除 <code>Skins/vLLMSentinel</code> 再放新文件夹</li></ol>
 <div class="note">数据源 /api/skin（每 6 秒刷新）· 需要内网/VPN 在线才能取到数据</div>
 </div></body></html>""")
-    print(f"  已发布到静态位: {os.path.join(static, stable_zip)}")
-print(f"  版本包: {ver_zip}")
-print(f"  固定包: {stable_zip}  ({os.path.getsize(stable_zip)} B, md5 {hashlib.md5(open(stable_zip,'rb').read()).hexdigest()[:8]})")
+    print(f"  交付版已发布静态位: {os.path.join(static, stable_zip)}")
+print(f"  仓库内（占位符）: {ver_zip} / {stable_zip}")
+print(f"  交付版（已注入）: {os.path.getsize(dstable)} B, md5 {hashlib.md5(open(dstable,'rb').read()).hexdigest()[:8]}")
 PY
 rm -rf "$DELIVER" 2>/dev/null || true
 echo
-echo "完成。交付包已注入真实地址；仓库内 build/ 保持占位符。"
+echo "完成。仓库内 zip 为占位符版；交付版已注入真实地址并只写入静态位。"
